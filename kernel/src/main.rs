@@ -12,6 +12,8 @@ extern crate alloc;
 pub mod arch;
 /// Audit logging.
 pub mod audit;
+/// Neural event bus.
+pub mod events;
 /// Memory management.
 pub mod mem;
 mod panic;
@@ -23,6 +25,7 @@ pub mod serial;
 pub mod services;
 mod test_runner;
 
+use alloc::string::ToString;
 use common::addr::PhysAddr;
 use common::security::{Capability, Token};
 use limine::{FramebufferRequest, HhdmRequest, MemmapRequest};
@@ -103,10 +106,14 @@ pub extern "C" fn _start() -> ! {
     sched::init();
     println!("Scheduler initialized.");
 
+    // Publish high-significance boot event
+    events::publish("Kernel Boot Sequence Complete".to_string(), 0.9);
+
     // Final initialization logs
     arch::x86_64::fingerprint::log_info(&hardware_fp);
     services::list_services();
     audit::print_logs();
+    events::list_events();
 
     // Check for framebuffer
     if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {

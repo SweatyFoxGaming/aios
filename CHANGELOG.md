@@ -9,3 +9,16 @@ All notable changes to Phoenix OS will be documented in this file.
 - Cargo workspace with `kernel` and `common` crates.
 - GitHub Actions CI configuration for basic build and linting.
 - Project documentation (README, ROADMAP, IMPROVEMENT_LOG).
+- `no_std` kernel configuration for `x86_64-unknown-none`.
+- Kernel-space testing framework skeleton.
+- Foundational `PhysAddr` and `VirtAddr` types.
+- `Makefile` for streamlined development.
+- Kernel binary size monitoring script.
+
+### Changed
+- Refactored kernel `main.rs` to separate modules for panic and testing.
+- Improved linker script robustness using wildcards.
+
+### Fixed
+- Fixed kernel build failure by adding `panic = "abort"` to workspace profiles.
+- Fixed `common` crate test failure by making `#![no_std]` conditional.

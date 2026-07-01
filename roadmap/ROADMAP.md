@@ -3,7 +3,7 @@
 Phoenix OS development plan and milestones.
 
 ## Phase 1: Foundation
-- [ ] **Milestone 1: Project Architecture and Repository Structure** (Current)
+- [x] **Milestone 1: Project Architecture and Repository Structure**
 - [ ] **Milestone 2: Bootloader Integration** (Limine)
 - [ ] **Milestone 3: Kernel Implementation** (Basic initialization)
 - [ ] **Milestone 4: Memory Management** (Physical and Virtual)

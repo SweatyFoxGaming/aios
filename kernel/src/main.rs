@@ -1,30 +1,24 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(crate::test_runner)]
+#![test_runner(crate::test_runner::runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use core::panic::PanicInfo;
+mod panic;
+mod test_runner;
+
+use common::addr::PhysAddr;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    // Initial verification of integration
+    let _initial_addr = PhysAddr(0x1000);
+
     #[cfg(test)]
     test_main();
 
     #[allow(clippy::empty_loop)]
     loop {}
-}
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    #[allow(clippy::empty_loop)]
-    loop {}
-}
-
-pub fn test_runner(tests: &[&dyn Fn()]) {
-    for test in tests {
-        test();
-    }
 }
 
 #[cfg(test)]

@@ -13,3 +13,9 @@ license = "Apache-2.0"
 repository = "https://github.com/phoenix-os/phoenix-os"
 homepage = "https://github.com/phoenix-os/phoenix-os"
 description = "A lightweight operating system optimized for low-end hardware."
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

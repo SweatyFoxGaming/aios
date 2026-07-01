@@ -1,4 +1,6 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
+
+pub mod addr;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right

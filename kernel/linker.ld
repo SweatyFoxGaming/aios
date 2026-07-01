@@ -6,21 +6,21 @@ SECTIONS
 
     .text :
     {
-        *(.text)
+        *(.text .text.*)
     }
 
     .rodata :
     {
-        *(.rodata)
+        *(.rodata .rodata.*)
     }
 
     .data :
     {
-        *(.data)
+        *(.data .data.*)
     }
 
     .bss :
     {
-        *(.bss)
+        *(.bss .bss.*)
     }
 }

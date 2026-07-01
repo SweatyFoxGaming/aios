@@ -11,6 +11,8 @@ pub mod arch;
 /// Memory management.
 pub mod mem;
 mod panic;
+/// Process scheduling.
+pub mod sched;
 /// Serial communication.
 pub mod serial;
 /// Service registry and discovery.
@@ -43,7 +45,13 @@ pub extern "C" fn _start() -> ! {
     let _ = services::register("KernelCore", 1);
     let _ = services::register("LogService", 1);
     let _ = services::register("MemoryService", 1);
+    let _ = services::register("ProcessService", 1);
     services::list_services();
+
+    // Initialize scheduler
+    sched::init();
+    println!("Scheduler initialized.");
+    sched::SCHEDULER.lock().list_tasks();
 
     // Check for framebuffer
     if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {

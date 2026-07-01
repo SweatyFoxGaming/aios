@@ -6,9 +6,9 @@ Phoenix OS development plan and milestones, centered around the JARVIS AI-Native
 - [x] **Milestone 1: Project Architecture and Repository Structure**
 - [x] **Milestone 2: Bootloader Integration** (Limine)
 - [x] **Milestone 3: Kernel Implementation** (API-First initialization, GDT/IDT)
-- [ ] **Milestone 4: Physical Memory Management** (Frame Allocator)
-- [ ] **Milestone 5: Virtual Memory Management** (Paging, Demand Paging)
-- [ ] **Milestone 6: Process Scheduler** (Event-driven, Resource Manager)
+- [x] **Milestone 4: Physical Memory Management** (Frame Allocator)
+- [ ] **Milestone 5: Process Scheduler** (Event-driven, Resource Manager)
+- [ ] **Milestone 6: Virtual Memory Management** (Paging, Demand Paging)
 
 ## Phase 2: Hardware & Communication
 - [ ] **Milestone 7: Interrupt and Exception Handling** (Full implementation)
@@ -33,7 +33,7 @@ Phoenix OS development plan and milestones, centered around the JARVIS AI-Native
 - [ ] **Milestone 20: AI Orchestrator & Executive Controller**
 - [ ] **Milestone 21: Specialized Agents** (Coding, Research, Automation)
 - [ ] **Milestone 22: Hierarchical Memory System** (Working, Episodic, Semantic)
-- [ ] **Milestone 23: Desktop Environment** (AI-Native UI)
+- [ ] **Milestone 23: Ambient UI & Desktop Environment** (Intent-driven workspaces)
 
 ## Phase 6: Deployment & Optimization
 - [ ] **Milestone 24: System Installer & Update Mechanism**

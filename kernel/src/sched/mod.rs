@@ -1,0 +1,69 @@
+//! Process scheduler for Phoenix OS.
+
+pub mod task;
+
+use crate::sched::task::Task;
+use lazy_static::lazy_static;
+use spin::Mutex;
+
+/// Maximum number of concurrent tasks.
+const MAX_TASKS: usize = 64;
+
+lazy_static! {
+    /// Global scheduler instance.
+    pub static ref SCHEDULER: Mutex<Scheduler> = Mutex::new(Scheduler::new());
+}
+
+/// A simple cooperative scheduler.
+pub struct Scheduler {
+    tasks: [Option<Task>; MAX_TASKS],
+    /// Index of the currently running task.
+    pub current_task_idx: usize,
+}
+
+impl Default for Scheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Scheduler {
+    /// Create a new scheduler.
+    #[must_use]
+    pub const fn new() -> Self {
+        // Workaround for non-const array initialization
+        const INIT: Option<Task> = None;
+        Self {
+            tasks: [INIT; MAX_TASKS],
+            current_task_idx: 0,
+        }
+    }
+
+    /// Add a new task to the scheduler.
+    pub fn add_task(&mut self, task: Task) -> bool {
+        for slot in &mut self.tasks {
+            if slot.is_none() {
+                *slot = Some(task);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// List all tasks.
+    pub fn list_tasks(&self) {
+        crate::println!("--- Active Tasks ---");
+        for task in self.tasks.iter().flatten() {
+            crate::println!("Task ID: {:?}, State: {:?}", task.id, task.state);
+        }
+        crate::println!("Current Task Index: {}", self.current_task_idx);
+        crate::println!("--------------------");
+    }
+}
+
+/// Initialize the scheduler.
+pub fn init() {
+    let mut sched = SCHEDULER.lock();
+    let kernel_task = Task::new(0);
+    let _ = sched.add_task(kernel_task);
+}

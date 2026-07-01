@@ -49,7 +49,7 @@ The central coordinator responsible for:
 ### 2.3. Executive Controller & Attention Manager
 - **Goal Management**: Maintains a hierarchy of Goal -> Milestone -> Task -> Action.
 - **Resource Allocation**: Adjusts model selection and agent activity based on hardware constraints (CPU, RAM, Battery).
-- **Attention Management**: Limits information processing per module to maintain system responsiveness.
+- **Attention Manager**: Limits information processing per module to maintain system responsiveness.
 
 ## 3. Hierarchical Memory System
 
@@ -78,12 +78,20 @@ Every system capability is a tool with a consistent interface:
 
 ### 5.1. Capability-Based Security
 - **Least-Privilege**: Every agent and plugin runs with the minimum required permissions.
-- **Audit Logs**: Every privileged action is recorded in a tamper-proof audit log.
+- **Audit Logs**: Every privileged action is recorded in a tamper-proof "Black Box" audit log.
 - **Human-in-the-Loop**: High-risk actions require explicit human approval.
+- **Capability Tokens**: Granular tokens required for service registration and discovery.
 
 ### 5.2. Governance Policies
 - **Autonomy levels**: User-defined boundaries for autonomous action.
 - **Privacy**: Local-first learning; user-controlled memory editing and deletion.
+
+### 5.3. Self-Protection (Anti-Hacking)
+- **Memory Safety**: Built entirely in Rust to eliminate buffer overflows and memory corruption.
+- **W^X Enforcement**: Memory pages are never both Writable and Executable.
+- **NX (No-Execute)**: Data and heap pages are tagged with the NX bit.
+- **ASLR Foundation**: Support for randomized offsets in heap and stack allocation.
+- **Immutable Core**: Key kernel structures are protected after initialization.
 
 ## 6. System Services & IPC
 
@@ -94,3 +102,4 @@ Every system capability is a tool with a consistent interface:
 ### 6.2. Observability
 - **Metrics & Tracing**: Real-time performance dashboards and event tracing.
 - **Health Checks**: Continuous monitoring of OS and AI service health.
+- **Black Box**: The `AuditService` provides immutable records of system intent.

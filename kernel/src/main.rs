@@ -6,8 +6,12 @@
 #![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)]
 
+extern crate alloc;
+
 /// Architecture-specific code.
 pub mod arch;
+/// Audit logging.
+pub mod audit;
 /// Memory management.
 pub mod mem;
 mod panic;
@@ -20,8 +24,8 @@ pub mod services;
 mod test_runner;
 
 use common::addr::PhysAddr;
+use common::security::{Capability, Token};
 use limine::{FramebufferRequest, HhdmRequest, MemmapRequest};
-use x86_64::structures::paging::FrameAllocator;
 use x86_64::VirtAddr;
 
 // Limine requests
@@ -40,27 +44,18 @@ static HHDM_REQUEST: HhdmRequest = HhdmRequest::new(0);
 /// Kernel entry point.
 ///
 /// # Panics
-/// Panics if the HHDM request fails.
+/// Panics if the HHDM request fails or memory management initialization fails.
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    use alloc::boxed::Box;
+
     println!("Phoenix OS Kernel booting...");
 
-    // Initialize architecture
+    // 1. Initialize architecture (GDT, IDT) - does not require heap
     arch::init();
     println!("Architecture initialized (GDT, IDT).");
 
-    // Register foundational services
-    let _ = services::register("KernelCore", 1);
-    let _ = services::register("LogService", 1);
-    let _ = services::register("MemoryService", 1);
-    let _ = services::register("ProcessService", 1);
-    services::list_services();
-
-    // Initialize scheduler
-    sched::init();
-    println!("Scheduler initialized.");
-
-    // Check for HHDM
+    // 2. Discover physical memory layout and HHDM
     let phys_mem_offset = HHDM_REQUEST.get_response().get().map_or_else(
         || {
             panic!("HHDM request failed");
@@ -68,25 +63,50 @@ pub extern "C" fn _start() -> ! {
         |hhdm_response| VirtAddr::new(hhdm_response.offset),
     );
 
-    // Check for memory map
-    if let Some(mmap_response) = MEMORY_MAP_REQUEST.get_response().get() {
-        println!(
-            "Memory map found with {} entries",
-            mmap_response.entry_count
-        );
+    let mmap_response = MEMORY_MAP_REQUEST
+        .get_response()
+        .get()
+        .expect("Memory map request failed");
 
-        // Initialize frame allocator
-        let mut frame_allocator = unsafe { mem::frame::BootFrameAllocator::init(mmap_response) };
+    // 3. Initialize memory management (Physical Frame Allocator, Virtual Paging, and Heap)
+    let mut frame_allocator = unsafe { mem::frame::BootFrameAllocator::init(mmap_response) };
+    let mut mapper = unsafe { mem::paging::init(phys_mem_offset) };
+    mem::heap::init_heap(&mut mapper, &mut frame_allocator).expect("Heap initialization failed");
 
-        // Initialize virtual memory
-        let mut _mapper = unsafe { mem::paging::init(phys_mem_offset) };
-        println!("Memory management initialized (Physical & Virtual).");
+    println!("Memory management initialized (Physical, Virtual, Heap).");
 
-        // Test allocation
-        if let Some(frame) = frame_allocator.allocate_frame() {
-            println!("Test allocation successful: {:?}", frame);
-        }
-    }
+    // 4. Gather hardware identity - requires heap for String
+    let hardware_fp = arch::x86_64::fingerprint::gather();
+
+    // 5. Setup Security Tokens - requires heap if using Vec or complex types
+    let mut kernel_token = Token::empty(0);
+    kernel_token.grant(Capability::ServiceRegister);
+    kernel_token.grant(Capability::MemAlloc);
+    kernel_token.grant(Capability::MemMap);
+    kernel_token.grant(Capability::SerialWrite);
+    kernel_token.grant(Capability::AuditWrite);
+    kernel_token.grant(Capability::HardwareInfo);
+
+    // 6. Register foundational services - requires heap for ServiceRegistry (Vec)
+    let _ = services::register("KernelCore", 1, &kernel_token);
+    let _ = services::register("LogService", 1, &kernel_token);
+    let _ = services::register_secure("MemoryService", 1, Capability::MemAlloc, &kernel_token);
+    let _ = services::register("ProcessService", 1, &kernel_token);
+    let _ = services::register_secure(
+        "HardwareIdentityService",
+        1,
+        Capability::HardwareInfo,
+        &kernel_token,
+    );
+
+    // 7. Initialize scheduler
+    sched::init();
+    println!("Scheduler initialized.");
+
+    // Final initialization logs
+    arch::x86_64::fingerprint::log_info(&hardware_fp);
+    services::list_services();
+    audit::print_logs();
 
     // Check for framebuffer
     if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {
@@ -97,6 +117,10 @@ pub extern "C" fn _start() -> ! {
             );
         }
     }
+
+    // Verify heap works
+    let heap_value = Box::new(42);
+    println!("Heap allocation verification: Boxed value = {}", heap_value);
 
     let initial_addr = PhysAddr(0x1000);
     println!("Initial address verified: {:?}", initial_addr);

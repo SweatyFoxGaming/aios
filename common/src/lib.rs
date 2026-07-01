@@ -5,6 +5,8 @@
 pub mod addr;
 /// Error handling types.
 pub mod error;
+/// Capability-based security types.
+pub mod security;
 
 /// Adds two numbers.
 #[must_use]

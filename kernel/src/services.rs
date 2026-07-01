@@ -1,11 +1,11 @@
 //! Service Registry for Phoenix OS.
 //! This allows kernel modules to register and discover structured APIs.
 
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use common::security::{Capability, Token};
 use lazy_static::lazy_static;
 use spin::Mutex;
-
-/// Maximum number of services.
-const MAX_SERVICES: usize = 32;
 
 /// A service entry in the registry.
 #[derive(Debug, Clone, Copy)]
@@ -14,6 +14,8 @@ pub struct ServiceEntry {
     pub name: &'static str,
     /// The version of the service API.
     pub version: u32,
+    /// The required capability to use this service.
+    pub required_capability: Option<Capability>,
 }
 
 lazy_static! {
@@ -21,40 +23,101 @@ lazy_static! {
 }
 
 struct ServiceRegistry {
-    services: [Option<ServiceEntry>; MAX_SERVICES],
-    count: usize,
+    services: Vec<ServiceEntry>,
 }
 
 impl ServiceRegistry {
     const fn new() -> Self {
         Self {
-            services: [None; MAX_SERVICES],
-            count: 0,
+            services: Vec::new(),
         }
     }
 
-    const fn register(&mut self, entry: ServiceEntry) -> bool {
-        if self.count >= MAX_SERVICES {
+    fn register(&mut self, entry: &ServiceEntry, token: &Token) -> bool {
+        // Only allow registration if the caller has ServiceRegister capability
+        if !token.has(Capability::ServiceRegister) {
+            crate::audit::log(
+                token,
+                "Register Service: ".to_string() + entry.name,
+                "Denied (Unauthorized)",
+            );
             return false;
         }
-        self.services[self.count] = Some(entry);
-        self.count += 1;
+
+        self.services.push(*entry);
+        crate::audit::log(
+            token,
+            "Register Service: ".to_string() + entry.name,
+            "Success",
+        );
         true
+    }
+
+    fn find(&self, name: &'static str, token: &Token) -> Option<ServiceEntry> {
+        for service in &self.services {
+            if service.name == name {
+                // Verify caller has required capability for this service
+                if let Some(cap) = service.required_capability {
+                    if !token.has(cap) {
+                        crate::audit::log(
+                            token,
+                            "Access Service: ".to_string() + name,
+                            "Denied (Missing Capability)",
+                        );
+                        return None;
+                    }
+                }
+                crate::audit::log(token, "Access Service: ".to_string() + name, "Granted");
+                return Some(*service);
+            }
+        }
+        None
     }
 }
 
 /// Register a new service.
 #[must_use]
-pub fn register(name: &'static str, version: u32) -> bool {
-    REGISTRY.lock().register(ServiceEntry { name, version })
+pub fn register(name: &'static str, version: u32, token: &Token) -> bool {
+    REGISTRY.lock().register(
+        &ServiceEntry {
+            name,
+            version,
+            required_capability: None,
+        },
+        token,
+    )
+}
+
+/// Register a service that requires a specific capability.
+#[must_use]
+pub fn register_secure(name: &'static str, version: u32, cap: Capability, token: &Token) -> bool {
+    REGISTRY.lock().register(
+        &ServiceEntry {
+            name,
+            version,
+            required_capability: Some(cap),
+        },
+        token,
+    )
+}
+
+/// Find a service by name.
+#[must_use]
+pub fn find(name: &'static str, token: &Token) -> Option<ServiceEntry> {
+    REGISTRY.lock().find(name, token)
 }
 
 /// List all registered services.
 pub fn list_services() {
     let registry = REGISTRY.lock();
     crate::println!("--- Registered Services ---");
-    for service in registry.services.iter().flatten() {
-        crate::println!("Service: {} (v{})", service.name, service.version);
+    for service in &registry.services {
+        crate::println!(
+            "Service: {} (v{}) [ReqCap: {:?}]",
+            service.name,
+            service.version,
+            service.required_capability
+        );
     }
     crate::println!("---------------------------");
 }

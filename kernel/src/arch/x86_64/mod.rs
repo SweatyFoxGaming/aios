@@ -1,4 +1,5 @@
 //! `x86_64` architecture-specific code.
+pub mod fingerprint;
 pub mod gdt;
 pub mod interrupts;
 

@@ -4,10 +4,15 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner::runner)]
 #![reexport_test_harness_main = "test_main"]
+#![feature(abi_x86_interrupt)]
 
+/// Architecture-specific code.
+pub mod arch;
 mod panic;
 /// Serial communication.
 pub mod serial;
+/// Service registry and discovery.
+pub mod services;
 mod test_runner;
 
 use common::addr::PhysAddr;
@@ -26,6 +31,15 @@ static MEMORY_MAP_REQUEST: MemmapRequest = MemmapRequest::new(0);
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Phoenix OS Kernel booting...");
+
+    // Initialize architecture
+    arch::init();
+    println!("Architecture initialized (GDT, IDT).");
+
+    // Register foundational services
+    let _ = services::register("KernelCore", 1);
+    let _ = services::register("LogService", 1);
+    services::list_services();
 
     // Check for framebuffer
     if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {

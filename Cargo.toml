@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "kernel",
+    "common",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Phoenix OS Developers"]
+license = "Apache-2.0"
+repository = "https://github.com/phoenix-os/phoenix-os"
+homepage = "https://github.com/phoenix-os/phoenix-os"
+description = "A lightweight operating system optimized for low-end hardware."

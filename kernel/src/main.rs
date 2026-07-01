@@ -20,8 +20,9 @@ pub mod services;
 mod test_runner;
 
 use common::addr::PhysAddr;
-use limine::{FramebufferRequest, MemmapRequest};
+use limine::{FramebufferRequest, HhdmRequest, MemmapRequest};
 use x86_64::structures::paging::FrameAllocator;
+use x86_64::VirtAddr;
 
 // Limine requests
 #[used]
@@ -32,7 +33,14 @@ static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new(0);
 #[link_section = ".limine_reqs"]
 static MEMORY_MAP_REQUEST: MemmapRequest = MemmapRequest::new(0);
 
+#[used]
+#[link_section = ".limine_reqs"]
+static HHDM_REQUEST: HhdmRequest = HhdmRequest::new(0);
+
 /// Kernel entry point.
+///
+/// # Panics
+/// Panics if the HHDM request fails.
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Phoenix OS Kernel booting...");
@@ -51,17 +59,14 @@ pub extern "C" fn _start() -> ! {
     // Initialize scheduler
     sched::init();
     println!("Scheduler initialized.");
-    sched::SCHEDULER.lock().list_tasks();
 
-    // Check for framebuffer
-    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {
-        if let Some(framebuffer) = framebuffer_response.framebuffers().first() {
-            println!(
-                "Framebuffer found: {}x{}",
-                framebuffer.width, framebuffer.height
-            );
-        }
-    }
+    // Check for HHDM
+    let phys_mem_offset = HHDM_REQUEST.get_response().get().map_or_else(
+        || {
+            panic!("HHDM request failed");
+        },
+        |hhdm_response| VirtAddr::new(hhdm_response.offset),
+    );
 
     // Check for memory map
     if let Some(mmap_response) = MEMORY_MAP_REQUEST.get_response().get() {
@@ -72,11 +77,24 @@ pub extern "C" fn _start() -> ! {
 
         // Initialize frame allocator
         let mut frame_allocator = unsafe { mem::frame::BootFrameAllocator::init(mmap_response) };
-        println!("Physical memory management initialized.");
+
+        // Initialize virtual memory
+        let mut _mapper = unsafe { mem::paging::init(phys_mem_offset) };
+        println!("Memory management initialized (Physical & Virtual).");
 
         // Test allocation
         if let Some(frame) = frame_allocator.allocate_frame() {
             println!("Test allocation successful: {:?}", frame);
+        }
+    }
+
+    // Check for framebuffer
+    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {
+        if let Some(framebuffer) = framebuffer_response.framebuffers().first() {
+            println!(
+                "Framebuffer found: {}x{}",
+                framebuffer.width, framebuffer.height
+            );
         }
     }
 

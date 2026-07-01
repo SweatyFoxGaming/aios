@@ -1,49 +1,42 @@
 # Phoenix OS - Ambient UI Specification
 
-This document defines the graphical interface philosophy and design language for Phoenix OS, centered around the **Ambient Computing** model.
+This document defines the graphical interface philosophy and design language for Phoenix OS, centered around the **Invisible Partner** model.
 
-## 1. Philosophy: "Nothing unless necessary"
+## 1. Philosophy: "The OS that makes Silence feel Intelligent"
 
-The Phoenix OS interface is designed to disappear when not in use. It rejects the traditional desktop metaphor (icons, docks, taskbars) in favor of a calm, architectural space that responds only to user intent.
+The Phoenix OS interface is not a toolset but a presence. It rejects the traditional desktop metaphor (icons, docks, taskbars) in favor of an empty, architectural space that responds only to user intent. The OS does not have an AI assistant; it *is* an AI assistant that reveals the system on demand.
 
 ### Core Principles
-- **Silence**: No persistent visual noise, notifications, or status monitors.
-- **Confidence**: The system does not need to prove its intelligence through flashy animations.
-- **Presence**: A waiting, patient atmosphere rather than a demanding one.
-- **Intent-Driven**: The interface materializes as a specific workspace for a specific task and recedes immediately upon completion.
+- **Silence as Intelligence**: The system communicates its capability through restraint rather than visual noise.
+- **Intent-Driven Materialization**: The interface exists only for the duration of a task. It assembles precisely the tools required and fades back into nothingness upon completion.
+- **Invisible Partner**: The experience should feel like working with a silent, proactive partner who anticipates needs and prepares the workspace.
+- **Justified Existence**: Every pixel must earn its existence. If an element does not directly serve the current intent, it is removed.
 
 ## 2. The Idle State: The Command Space
 
-When idle, the screen is a deep charcoal black (#0A0C10) canvas with subtle gradients.
+When idle, the screen is a deep matte charcoal (#0A0C10) canvas.
 
-### The JARVIS Ring
-At the exact center of the display is a single geometric form representing JARVIS:
-- **Form**: Thin concentric rings with matte white highlights.
-- **Accents**: Minimal muted cyan.
-- **Behavior**: Perfectly still. No pulsing, breathing, or rotation.
-- **Interaction**: Responds to the "Jarvis..." wake word with a faint increase in brightness and a subtle expansion of the rings. No voice visualizers or waveforms.
+### The Phoenix Emblem
+At the exact center of the display is a single, elegant **Phoenix Emblem**:
+- **Form**: A refined, symmetrical geometric mark inspired by industrial design.
+- **Aesthetic**: Matte white highlights with subtle depth. No glowing, pulsing, or rotation.
+- **Presence**: Silent and confident. It represents the waiting potential of the system.
 
-## 3. The Active State: Materializing Workspaces
+## 3. The Active State: Materializing Intent
 
-The workspace is built dynamically around the user's current goal (e.g., "Build a Rust game").
+When the user expresses intent (e.g., "Jarvis, research the latest in solid-state batteries"), the workspace materializes around the user.
 
-- **Materialization**: Panels slide smoothly from the edges only as required by the current task.
-- **Composition**: Empty space dominates. High-end spacing inspired by Apple Vision Pro.
-- **Purpose**: Every visible element must have a direct relation to the expressed intent.
-- **Recession**: Once the task is dismissed, the interface gracefully disappears, returning the system to the silent Command Space.
+- **Selective Assembly**: Only the necessary tools (reading pane, citation manager, reasoning panel) slide into view.
+- **Adaptive Spacing**: High-end whitespace inspired by Apple Vision Pro. Rounded geometry and matte surfaces.
+- **Subtle Accents**: Muted cyan (#00BCD4 at low saturation) used only for critical focus points.
+- **Transient Nature**: Once the goal is achieved, the tools fade away, returning the user to the calm Phoenix Emblem.
 
 ## 4. Design Language & Aesthetics
 
-- **Inspiration**: Braun industrial design (Dieter Rams), Nothing Phone restraint, Japanese and Scandinavian minimalism.
-- **Typography**: Thin, modern sans-serif with generous whitespace and large margins.
-- **Color Palette**:
-    - Primary: Deep Charcoal Black (#0A0C10)
-    - Secondary: Graphite
-    - Highlights: Soft White
-    - Accents: Muted Cyan (No neon, no RGB)
+- **Inspiration**: Braun (Dieter Rams), Nothing Phone, Linear, Scandinavian and Japanese minimalism.
+- **Typography**: Thin, modern sans-serif. Large margins and generous whitespace.
+- **Motion**: Almost non-existent. Transitions are smooth and purposeful, never decorative. No waveforms, oscilloscopes, or HUD overlays.
 
-## 5. Technical Implementation Goals
+## 5. Emotional Goal
 
-- **Latency**: Sub-millisecond response to intent expression.
-- **Modular Panels**: UI components are registered as services via the Phoenix Service Bus.
-- **Resource Aware**: UI rendering scales based on hardware; low-end systems maintain the same aesthetic with simplified geometry.
+The interface should evoke a sense of **Silence, Confidence, and Presence**. The user should feel that the computer is intelligent enough that it does not need to constantly prove it.

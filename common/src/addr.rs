@@ -9,13 +9,53 @@ pub struct PhysAddr(pub u64);
 pub struct VirtAddr(pub u64);
 
 impl PhysAddr {
-    pub fn as_u64(self) -> u64 {
+    /// Returns the address as a `u64`.
+    #[must_use]
+    pub const fn as_u64(self) -> u64 {
         self.0
+    }
+
+    /// Checks if the address is aligned to the given boundary.
+    #[must_use]
+    pub const fn is_aligned(self, align: u64) -> bool {
+        self.0 % align == 0
+    }
+
+    /// Aligns the address down to the given boundary.
+    #[must_use]
+    pub const fn align_down(self, align: u64) -> Self {
+        Self(self.0 & !(align - 1))
+    }
+
+    /// Aligns the address up to the given boundary.
+    #[must_use]
+    pub const fn align_up(self, align: u64) -> Self {
+        Self((self.0 + align - 1) & !(align - 1))
     }
 }
 
 impl VirtAddr {
-    pub fn as_u64(self) -> u64 {
+    /// Returns the address as a `u64`.
+    #[must_use]
+    pub const fn as_u64(self) -> u64 {
         self.0
+    }
+
+    /// Checks if the address is aligned to the given boundary.
+    #[must_use]
+    pub const fn is_aligned(self, align: u64) -> bool {
+        self.0 % align == 0
+    }
+
+    /// Aligns the address down to the given boundary.
+    #[must_use]
+    pub const fn align_down(self, align: u64) -> Self {
+        Self(self.0 & !(align - 1))
+    }
+
+    /// Aligns the address up to the given boundary.
+    #[must_use]
+    pub const fn align_up(self, align: u64) -> Self {
+        Self((self.0 + align - 1) & !(align - 1))
     }
 }

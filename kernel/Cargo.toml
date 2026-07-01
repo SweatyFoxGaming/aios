@@ -5,6 +5,10 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
+uart_16550 = "0.3.0"
+spin = "0.9.8"
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+limine = "0.1.12"
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(test_harness)'] }
+[lints]
+workspace = true

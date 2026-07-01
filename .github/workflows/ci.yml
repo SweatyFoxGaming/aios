@@ -36,6 +36,9 @@ jobs:
     - name: Clippy
       run: cargo clippy --workspace -- -D warnings
 
+    - name: cargo-deny
+      uses: EmbarkStudios/cargo-deny-action@v2
+
     - name: Generate Documentation
       run: cargo doc --workspace --no-deps
 

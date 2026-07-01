@@ -1,8 +1,14 @@
+//! Foundation library for Phoenix OS.
 #![cfg_attr(not(test), no_std)]
 
+/// Memory address types.
 pub mod addr;
+/// Error handling types.
+pub mod error;
 
-pub fn add(left: usize, right: usize) -> usize {
+/// Adds two numbers.
+#[must_use]
+pub const fn add(left: usize, right: usize) -> usize {
     left + right
 }
 

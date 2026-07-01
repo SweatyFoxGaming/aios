@@ -14,7 +14,12 @@ use common::addr::PhysAddr;
 use limine::{FramebufferRequest, MemmapRequest};
 
 // Limine requests
+#[used]
+#[link_section = ".limine_reqs"]
 static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new(0);
+
+#[used]
+#[link_section = ".limine_reqs"]
 static MEMORY_MAP_REQUEST: MemmapRequest = MemmapRequest::new(0);
 
 /// Kernel entry point.

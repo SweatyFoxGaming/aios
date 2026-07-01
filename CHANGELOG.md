@@ -14,8 +14,12 @@ All notable changes to Phoenix OS will be documented in this file.
 - Foundational `PhysAddr` and `VirtAddr` types.
 - `Makefile` for streamlined development.
 - Kernel binary size monitoring script.
+- Serial logging via COM1 for debugging.
+- Initial Limine bootloader integration (Requests setup).
+- Capability-based security and API-first core architecture vision.
 
 ### Changed
+- Major architectural pivot: Phoenix OS is now an AI-Native OS centered around JARVIS.
 - Refactored kernel `main.rs` to separate modules for panic and testing.
 - Improved linker script robustness using wildcards.
 

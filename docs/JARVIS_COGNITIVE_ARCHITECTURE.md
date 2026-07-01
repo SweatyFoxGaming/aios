@@ -1,71 +1,48 @@
 # JARVIS Cognitive Architecture
 
-This document defines the high-level cognitive architecture for JARVIS, the orchestration layer of Phoenix OS.
+This document defines the cognitive model for JARVIS, integrated into the Phoenix OS AI Orchestration layer.
 
-## 1. Modular Brain (Cognitive Architecture)
+## 1. The AI Orchestrator Model
 
-JARVIS is composed of specialized, independent modules:
+JARVIS acts as the **AI Orchestrator**, a central nervous system that coordinates specialized agents and manages the executive functions of the OS.
 
-- **Personality**: Manages interaction style and tone.
-- **Memory**: Handles short-term and long-term storage/retrieval.
-- **Planner**: Breaks down goals into actionable tasks.
-- **Reasoning**: Performs logical analysis and decision making.
-- **Research**: Gathers information from local and remote sources.
-- **Vision**: Processes visual data (images, screenshots, camera).
-- **Voice**: Handles STT (Speech-to-Text) and TTS (Text-to-Speech).
-- **Coding**: Specialized in software development and debugging.
-- **Automation**: Executes recurring workflows and scripts.
-- **Security**: Audits actions against the capability-based security model.
-- **Learning**: Extracts facts and preferences from interactions.
+### 1.1. Core Components
+- **Executive Controller**: The "Prefrontal Cortex" of JARVIS. It chooses goals, pauses work when priorities shift, and manages the lifecycle of all agents.
+- **Attention Manager**: Filters and prioritizes inputs to ensure the system remains responsive on low-end hardware.
+- **Reflection Module**: An introspective layer that reviews completed tasks to identify errors and propose workflow improvements.
 
-## 2. Multi-Agent System
+## 2. Multi-Agent Coordination
 
-JARVIS utilizes a "Commander-Agent" model:
+Instead of a monolithic AI, JARVIS coordinates a swarm of specialized agents via the **AI Message Bus**:
 
-- **Commander**: The central coordinator that interacts with the user.
-- **Specialized Agents**: Coding, Research, Security, Design, Automation, Memory, and Diagnostics agents.
-- **Coordination**: The Commander delegates tasks to specialized agents rather than performing all work itself.
+- **Commander (Personality Layer)**: The user-facing identity. Calm, helpful, and professional.
+- **Specialized Agents**:
+    - **Coding Agent**: Handles development and debugging.
+    - **Research Agent**: Multi-source info gathering with fact-checking.
+    - **Planning Agent**: Hierarchical goal decomposition.
+    - **Memory Agent**: Hierarchical storage and retrieval.
+    - **Security Agent**: Capability auditing and permission management.
 
-## 3. AI Message Bus
+## 3. Memory Architecture
 
-Communication between JARVIS modules and agents is handled via an **Event Bus** rather than direct coupling. This allows for:
+Memory is implemented as a multi-layered system managed by the **Memory Agent**:
 
-- Decoupling of components.
-- Easier integration of new modules.
-- Asynchronous processing of complex tasks.
+- **Short-Term (Working/Session)**: Immediate context.
+- **Mid-Term (Project/Episodic)**: Task and event history.
+- **Long-Term (Semantic/Preference)**: Fact-base and user profile.
+- **Procedural (Skill Library)**: Reusable automation routines and workflows.
 
-## 4. Context Engine
+## 4. Interaction Modes
 
-A centralized engine that tracks:
-- Current project and goals.
-- Active files and running applications.
-- User intent and conversation history.
-- Available tools and recent work.
+JARVIS supports multimodal interaction:
+- **Voice**: Conversational STT/TTS.
+- **Text**: Natural language shell.
+- **Visual**: Vision engine for UI understanding and camera data.
+- **Symbolic**: Direct API/Structured data interaction with OS services.
 
-## 5. Long-Term Memory Layers
+## 5. Reasoning & Uncertainty
 
-Memory is organized into hierarchical layers for efficient retrieval:
-1. **Working Memory**: Last few minutes of interaction.
-2. **Session Memory**: Current task context.
-3. **Project Memory**: Knowledge specific to the current project.
-4. **Long-Term Memory**: User history and established preferences.
-5. **Knowledge Database**: General research and facts.
-6. **Skill Database**: Learned workflows and automation routines.
-
-## 6. Skill & Plugin System
-
-- **Skills**: Reusable compositions of basic actions (e.g., "Create Website" = Research + Plan + Code + Test).
-- **Plugins**: A standard for third-party extensions (Skills, Agents, Models, Drivers, Themes).
-
-## 7. Intelligent Resource Management
-
-Optimized for low-end hardware:
-- **Model Router**: Switches between small local models (for simple tasks) and cloud models (for complex reasoning).
-- **Dynamic Loading**: Unloads idle models and suspends inactive agents.
-- **Compression**: Uses memory compression (zram) for model weights and context.
-
-## 8. Safety & Auditing
-
-- **Capability-Based Security**: JARVIS must have a specific "capability token" for every sensitive action.
-- **Versioned Memory**: Knowledge evolution is tracked, allowing for rollbacks and auditing.
-- **Transparency**: Reasoning can be explained upon request.
+JARVIS tracks **Confidence Levels** for every action. If confidence is below a threshold, the system is required to:
+1. Record the uncertainty.
+2. Formulate a clarifying question for the user.
+3. Pause execution until the ambiguity is resolved.

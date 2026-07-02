@@ -12,22 +12,31 @@ extern crate alloc;
 pub mod arch;
 /// Audit logging.
 pub mod audit;
+/// Hardware drivers.
+pub mod drivers;
+/// Self-awareness and identity.
+pub mod ego;
 /// Neural event bus.
 pub mod events;
 /// Memory management.
 pub mod mem;
 mod panic;
+/// Resource governor.
+pub mod pulse;
 /// Process scheduling.
 pub mod sched;
 /// Serial communication.
 pub mod serial;
 /// Service registry and discovery.
 pub mod services;
+/// Synapse IPC.
+pub mod synapse;
 mod test_runner;
 
 use alloc::string::ToString;
 use common::addr::PhysAddr;
 use common::security::{Capability, Token};
+use common::synapse::Message;
 use limine::{FramebufferRequest, HhdmRequest, MemmapRequest};
 use x86_64::VirtAddr;
 
@@ -101,36 +110,57 @@ pub extern "C" fn _start() -> ! {
         Capability::HardwareInfo,
         &kernel_token,
     );
+    let _ = services::register("SynapseService", 1, &kernel_token);
+    let _ = services::register("EgoService", 1, &kernel_token);
+    let _ = services::register("PulseService", 1, &kernel_token);
+    let _ = services::register("DisplayService", 1, &kernel_token);
 
     // 7. Initialize scheduler
     sched::init();
     println!("Scheduler initialized.");
 
+    // Check for framebuffer and initialize Aura
+    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {
+        if let Some(framebuffer) = framebuffer_response.framebuffers().first() {
+            println!(
+                "Framebuffer found: {}x{}. Initializing Aura...",
+                framebuffer.width, framebuffer.height
+            );
+            drivers::display::init(framebuffer);
+        }
+    }
+
+    // Set final ego state
+    ego::set_state(ego::PresenceState::Idle);
+
+    // Start resource monitoring
+    pulse::monitor();
+
     // Publish high-significance boot event
     events::publish("Kernel Boot Sequence Complete".to_string(), 0.9);
+
+    // Test Synapse IPC
+    synapse::send(Message::new(
+        "KernelCore",
+        "AuditLog",
+        "Initial Synapse Probe".to_string(),
+    ));
 
     // Final initialization logs
     arch::x86_64::fingerprint::log_info(&hardware_fp);
     services::list_services();
     audit::print_logs();
     events::list_events();
+    synapse::debug_bus();
+    ego::log_status();
+    pulse::log_status();
 
-    // Check for framebuffer
-    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {
-        if let Some(framebuffer) = framebuffer_response.framebuffers().first() {
-            println!(
-                "Framebuffer found: {}x{}",
-                framebuffer.width, framebuffer.height
-            );
-        }
-    }
+    let initial_addr = PhysAddr(0x1000);
+    println!("Initial address verified: {:?}", initial_addr);
 
     // Verify heap works
     let heap_value = Box::new(42);
     println!("Heap allocation verification: Boxed value = {}", heap_value);
-
-    let initial_addr = PhysAddr(0x1000);
-    println!("Initial address verified: {:?}", initial_addr);
 
     #[cfg(test)]
     test_main();

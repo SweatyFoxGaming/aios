@@ -7,6 +7,14 @@ use common::security::{Capability, Token};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
+/// Service status for health monitoring.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServiceStatus {
+    Active,
+    Failed,
+    Repairing,
+}
+
 /// A service entry in the registry.
 #[derive(Debug, Clone, Copy)]
 pub struct ServiceEntry {
@@ -18,6 +26,10 @@ pub struct ServiceEntry {
     pub required_capability: Option<Capability>,
     /// Whether this is a decoy "Honey-Service".
     pub is_decoy: bool,
+    /// Current health status.
+    pub status: ServiceStatus,
+    /// Last heartbeat timestamp (simulated).
+    pub last_heartbeat: u64,
 }
 
 lazy_static! {
@@ -35,7 +47,7 @@ impl ServiceRegistry {
         }
     }
 
-    fn register(&mut self, entry: &ServiceEntry, token: &Token) -> bool {
+    fn register(&mut self, mut entry: ServiceEntry, token: &Token) -> bool {
         // Only allow registration if the caller has ServiceRegister capability
         if !token.has(Capability::ServiceRegister) {
             crate::audit::log(
@@ -46,7 +58,9 @@ impl ServiceRegistry {
             return false;
         }
 
-        self.services.push(*entry);
+        entry.status = ServiceStatus::Active;
+        entry.last_heartbeat = 0;
+        self.services.push(entry);
         crate::audit::log(token, "Register Service: ".to_string() + entry.name, "Success");
         true
     }
@@ -85,11 +99,13 @@ impl ServiceRegistry {
 #[must_use]
 pub fn register(name: &'static str, version: u32, token: &Token) -> bool {
     REGISTRY.lock().register(
-        &ServiceEntry {
+        ServiceEntry {
             name,
             version,
             required_capability: None,
             is_decoy: false,
+            status: ServiceStatus::Active,
+            last_heartbeat: 0,
         },
         token,
     )
@@ -99,11 +115,13 @@ pub fn register(name: &'static str, version: u32, token: &Token) -> bool {
 #[must_use]
 pub fn register_secure(name: &'static str, version: u32, cap: Capability, token: &Token) -> bool {
     REGISTRY.lock().register(
-        &ServiceEntry {
+        ServiceEntry {
             name,
             version,
             required_capability: Some(cap),
             is_decoy: false,
+            status: ServiceStatus::Active,
+            last_heartbeat: 0,
         },
         token,
     )
@@ -113,11 +131,13 @@ pub fn register_secure(name: &'static str, version: u32, cap: Capability, token:
 #[must_use]
 pub fn register_decoy(name: &'static str, token: &Token) -> bool {
     REGISTRY.lock().register(
-        &ServiceEntry {
+        ServiceEntry {
             name,
             version: 0,
             required_capability: None,
             is_decoy: true,
+            status: ServiceStatus::Active,
+            last_heartbeat: 0,
         },
         token,
     )
@@ -136,12 +156,45 @@ pub fn list_services() {
     for service in &registry.services {
         let decoy_flag = if service.is_decoy { "[DECOY]" } else { "" };
         crate::println!(
-            "Service: {} (v{}) [ReqCap: {:?}] {}",
+            "Service: {} (v{}) [Status: {:?}] [ReqCap: {:?}] {}",
             service.name,
             service.version,
+            service.status,
             service.required_capability,
             decoy_flag
         );
     }
     crate::println!("---------------------------");
+}
+
+/// Pulse heartbeats for all active services and return names of failed services.
+pub fn check_health() -> Vec<&'static str> {
+    let mut registry = REGISTRY.lock();
+    let mut failed = Vec::new();
+
+    for service in &mut registry.services {
+        if service.is_decoy {
+            continue;
+        }
+
+        service.last_heartbeat += 1;
+        // Simulating a failure every 10 heartbeats for a mock service "Aura"
+        if service.name == "Aura" && service.last_heartbeat % 10 == 0 {
+            service.status = ServiceStatus::Failed;
+            failed.push(service.name);
+        }
+    }
+
+    failed
+}
+
+/// Update service status.
+pub fn set_status(name: &str, status: ServiceStatus) {
+    let mut registry = REGISTRY.lock();
+    for service in &mut registry.services {
+        if service.name == name {
+            service.status = status;
+            break;
+        }
+    }
 }

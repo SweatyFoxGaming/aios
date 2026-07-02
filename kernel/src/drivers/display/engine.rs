@@ -11,6 +11,8 @@ pub enum Pattern {
     Materialize,
     /// Alert / Warning Pulse.
     Pulse,
+    /// Idle State (Emblem).
+    Idle,
 }
 
 /// The Ambient UI Engine state.
@@ -36,14 +38,33 @@ pub fn materialize(pattern: Pattern) {
         ENGINE.active_pattern = pattern;
         match ENGINE.active_pattern {
             Pattern::ConcentricRings => {
-                aura::render_ring(ENGINE.focus_point.0, ENGINE.focus_point.1, 40, aura::colors::PHOENIX_GOLD);
-                aura::render_ring(ENGINE.focus_point.0, ENGINE.focus_point.1, 60, aura::colors::PHOENIX_GOLD);
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    40,
+                    aura::colors::INTENT_CYAN,
+                );
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    60,
+                    aura::colors::INTENT_CYAN,
+                );
             }
             Pattern::Materialize => {
+                aura::clear_screen();
                 aura::materialize_workspace("General Purpose");
             }
             Pattern::Pulse => {
-                aura::render_ring(ENGINE.focus_point.0, ENGINE.focus_point.1, 50, aura::colors::INTENT_CYAN);
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    50,
+                    aura::colors::INTENT_CYAN,
+                );
+            }
+            Pattern::Idle => {
+                aura::render_emblem();
             }
         }
     }

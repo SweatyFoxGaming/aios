@@ -3,12 +3,16 @@
 use alloc::string::String;
 
 /// Represents a concept or entity in the knowledge graph.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KnowledgeNode {
     /// Unique identifier for the node.
     pub id: u64,
     /// The name/label of the concept.
     pub label: String,
+    /// Significance score (0.0 to 1.0).
+    pub significance: f32,
+    /// Last access timestamp (simulated).
+    pub last_access: u64,
 }
 
 /// Represents a relationship between two knowledge nodes.

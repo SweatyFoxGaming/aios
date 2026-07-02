@@ -2,10 +2,21 @@
 //! Monitors agent consistency and resource leakage.
 
 use crate::println;
+use crate::services;
+use crate::ghost;
 use alloc::string::ToString;
 
 /// Checks for inconsistencies or "exhaustion" in AI modules.
 pub fn check_health() {
+    println!("[Vesta] Monitoring system homeostasis...");
+
+    // Check registered services
+    let failed_services = services::check_health();
+    for service in failed_services {
+        println!("[Vesta] ALERT: Service '{}' has failed!", service);
+        ghost::heal(service);
+    }
+
     // Placeholder for actual AI consistency checks
     let consistency_score = 1.0;
 

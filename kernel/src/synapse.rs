@@ -37,6 +37,8 @@ pub fn transfer_frame(target_task_id: u64, frame: SharedFrame) {
         target: "UserspaceTask", // Placeholder for actual target lookup
         intent: "SharedFrameAttached".into(),
         payload: Some(frame.phys_addr.to_string()),
+        prosody: common::synapse::Prosody::Calm,
+        dialect: common::synapse::Dialect::System,
         frame: None,
     };
     send(msg);
@@ -47,9 +49,16 @@ pub fn transfer_frame(target_task_id: u64, frame: SharedFrame) {
 /// Send a standard message.
 pub fn send(message: Message) {
     println!(
-        "[Synapse] Dispatching: {} -> {} ({})",
-        message.sender, message.target, message.intent
+        "[Synapse] Dispatching ({:?}): {} -> {} ({})",
+        message.dialect, message.sender, message.target, message.intent
     );
+
+    // If it's a cognitive monologue, we "whisper" it to the audit log
+    if message.dialect == common::synapse::Dialect::Cognitive {
+        if let Some(reasoning) = &message.payload {
+            println!("[Synapse] Cognitive Monologue: {}", reasoning);
+        }
+    }
 }
 
 /// Debug the Synapse bus.

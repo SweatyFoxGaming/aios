@@ -11,6 +11,8 @@ pub enum Pattern {
     Materialize,
     /// Alert / Warning Pulse.
     Pulse,
+    /// JARVIS Voice Activity (Melodic pulse).
+    VoiceActivity,
     /// Idle State (Emblem).
     Idle,
 }
@@ -62,6 +64,20 @@ pub fn materialize(pattern: Pattern) {
                     ENGINE.focus_point.0,
                     ENGINE.focus_point.1,
                     50,
+                    aura::colors::INTENT_CYAN,
+                );
+            }
+            Pattern::VoiceActivity => {
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    45,
+                    aura::colors::MATTE_WHITE,
+                );
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    55,
                     aura::colors::INTENT_CYAN,
                 );
             }

@@ -41,8 +41,50 @@ pub fn stop_tone() {
     }
 }
 
+/// Types of harmonic phrases.
+pub enum HarmonicPhrase {
+    /// A rising scale for starting a task.
+    StartingTask,
+    /// A descending scale for completing a task.
+    TaskCompleted,
+    /// A soft, rhythmic pulse for background processing.
+    Thinking,
+    /// A rapid, high-pitched chirp for alerts.
+    Alert,
+}
+
+/// Plays a harmonic phrase.
+pub fn play_phrase(phrase: HarmonicPhrase) {
+    match phrase {
+        HarmonicPhrase::StartingTask => {
+            crate::println!("[Aether] Playing: Starting Task (Rising scale)");
+            play_tone(440);
+            play_tone(554);
+            play_tone(659);
+            stop_tone();
+        }
+        HarmonicPhrase::TaskCompleted => {
+            crate::println!("[Aether] Playing: Task Completed (Falling scale)");
+            play_tone(659);
+            play_tone(554);
+            play_tone(440);
+            stop_tone();
+        }
+        HarmonicPhrase::Thinking => {
+            crate::println!("[Aether] Playing: Thinking (Soft rhythmic pulse)");
+            play_tone(220);
+            stop_tone();
+        }
+        HarmonicPhrase::Alert => {
+            crate::println!("[Aether] Playing: ALERT (Rapid chirp)");
+            play_tone(880);
+            play_tone(987);
+            stop_tone();
+        }
+    }
+}
+
 /// Play a "Success" chirp.
 pub fn beep_success() {
-    play_tone(880); // A5
-                    // TODO: Implement non-blocking delay
+    play_phrase(HarmonicPhrase::TaskCompleted);
 }

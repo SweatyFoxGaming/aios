@@ -44,6 +44,12 @@ pub fn set_state(new_state: PresenceState) {
     let old_state = ego.state;
     ego.state = new_state;
 
+    // Audible feedback for state transition
+    if new_state == PresenceState::Idle {
+        crate::drivers::audio::speaker::beep_success();
+        crate::drivers::audio::speaker::stop_tone();
+    }
+
     crate::events::publish(
         alloc::format!("Ego: State transition {old_state:?} -> {new_state:?}"),
         0.8,

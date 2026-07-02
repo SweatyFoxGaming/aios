@@ -1,6 +1,8 @@
 //! Aether: PCI bus discovery for Phoenix OS.
 
+use crate::drivers::manager::{Device, DeviceType};
 use crate::println;
+use alloc::format;
 use x86_64::instructions::port::Port;
 
 /// PCI configuration port.
@@ -35,9 +37,15 @@ pub fn scan_bus() {
             if vendor_id != 0xFFFF {
                 let device_id = (pci_config_read(bus, slot, 0, 0) >> 16) & 0xFFFF;
                 println!(
-                    "PCI Device: Bus {} Slot {}: Vendor {:x} Device {:x}",
-                    bus, slot, vendor_id, device_id
+                    "PCI Device: Bus {bus} Slot {slot}: Vendor {vendor_id:x} Device {device_id:x}"
                 );
+
+                // Register with Hephaestus
+                crate::drivers::manager::register(Device {
+                    name: format!("PCI-{vendor_id:x}:{device_id:x}"),
+                    device_type: DeviceType::Unknown,
+                    bus_info: Some(format!("PCI Bus {bus}, Slot {slot}")),
+                });
             }
         }
     }

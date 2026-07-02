@@ -39,6 +39,8 @@ pub mod serial;
 pub mod services;
 /// Synapse IPC.
 pub mod synapse;
+/// System calls.
+pub mod syscall;
 mod test_runner;
 /// AI homeostasis.
 pub mod vesta;
@@ -97,6 +99,11 @@ pub extern "C" fn _start() -> ! {
 
     println!("Memory management initialized (Physical, Virtual, Heap).");
 
+    // Initialize APIC after memory is ready
+    unsafe {
+        arch::x86_64::apic::init(phys_mem_offset);
+    }
+
     // 4. Gather hardware identity - requires heap for String
     let hardware_fp = arch::x86_64::fingerprint::gather();
 
@@ -125,6 +132,7 @@ pub extern "C" fn _start() -> ! {
     let _ = services::register("PulseService", 1, &kernel_token);
     let _ = services::register("DisplayService", 1, &kernel_token);
     let _ = services::register("FilesystemService", 1, &kernel_token);
+    let _ = services::register("OracleService", 1, &kernel_token);
 
     // 7. Initialize scheduler
     sched::init();
@@ -170,6 +178,9 @@ pub extern "C" fn _start() -> ! {
         "AuditLog",
         "Initial Synapse Probe".to_string(),
     ));
+
+    // Test Syscall Interface (Oracle)
+    let _ = syscall::handle_syscall(1, 0, 0);
 
     // Final initialization logs
     arch::x86_64::fingerprint::log_info(&hardware_fp);

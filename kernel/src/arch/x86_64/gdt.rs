@@ -24,31 +24,55 @@ lazy_static! {
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
+        let kernel_code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
+        let kernel_data_selector = gdt.add_entry(Descriptor::kernel_data_segment());
+        let user_data_selector = gdt.add_entry(Descriptor::user_data_segment());
+        let user_code_selector = gdt.add_entry(Descriptor::user_code_segment());
         let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
         (
             gdt,
             Selectors {
-                code_selector,
+                kernel_code_selector,
+                kernel_data_selector,
+                user_code_selector,
+                user_data_selector,
                 tss_selector,
             },
         )
     };
 }
 
-struct Selectors {
-    code_selector: SegmentSelector,
-    tss_selector: SegmentSelector,
+/// GDT selectors for different segments.
+pub struct Selectors {
+    /// Kernel code segment.
+    pub kernel_code_selector: SegmentSelector,
+    /// Kernel data segment.
+    pub kernel_data_selector: SegmentSelector,
+    /// User code segment.
+    pub user_code_selector: SegmentSelector,
+    /// User data segment.
+    pub user_data_selector: SegmentSelector,
+    /// TSS segment.
+    pub tss_selector: SegmentSelector,
 }
 
 /// Initialize the GDT.
 pub fn init() {
-    use x86_64::instructions::segmentation::{Segment, CS};
+    use x86_64::instructions::segmentation::{Segment, CS, DS, ES, SS};
     use x86_64::instructions::tables::load_tss;
 
     GDT.0.load();
     unsafe {
-        CS::set_reg(GDT.1.code_selector);
+        CS::set_reg(GDT.1.kernel_code_selector);
+        DS::set_reg(GDT.1.kernel_data_selector);
+        ES::set_reg(GDT.1.kernel_data_selector);
+        SS::set_reg(GDT.1.kernel_data_selector);
         load_tss(GDT.1.tss_selector);
     }
+}
+
+/// Get the GDT selectors.
+#[must_use]
+pub fn get_selectors() -> &'static Selectors {
+    &GDT.1
 }

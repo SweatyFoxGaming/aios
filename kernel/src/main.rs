@@ -18,8 +18,14 @@ pub mod drivers;
 pub mod ego;
 /// Neural event bus.
 pub mod events;
+/// Intent parser.
+pub mod hermes;
+/// Context engine.
+pub mod kairos;
 /// Memory management.
 pub mod mem;
+/// Semantic memory.
+pub mod mnemosyne;
 mod panic;
 /// Resource governor.
 pub mod pulse;
@@ -32,6 +38,8 @@ pub mod services;
 /// Synapse IPC.
 pub mod synapse;
 mod test_runner;
+/// AI homeostasis.
+pub mod vesta;
 
 use alloc::string::ToString;
 use common::addr::PhysAddr;
@@ -133,8 +141,19 @@ pub extern "C" fn _start() -> ! {
     // Set final ego state
     ego::set_state(ego::PresenceState::Idle);
 
-    // Start resource monitoring
+    // Initialize Cognitive Core flow
+    let node_id = mnemosyne::add_node("Phoenix Project".to_string());
+    let sub_id = mnemosyne::add_node("Kernel Implementation".to_string());
+    mnemosyne::add_relation(sub_id, node_id, common::memory::Relation::PartOf);
+
+    // Simulate Hermes Intent Parsing
+    let raw_input = "research solid state batteries";
+    let intent = hermes::parse(raw_input);
+    hermes::dispatch(&intent);
+
+    // Final checks
     pulse::monitor();
+    vesta::check_health();
 
     // Publish high-significance boot event
     events::publish("Kernel Boot Sequence Complete".to_string(), 0.9);
@@ -154,6 +173,9 @@ pub extern "C" fn _start() -> ! {
     synapse::debug_bus();
     ego::log_status();
     pulse::log_status();
+    kairos::log_status();
+    vesta::log_status();
+    mnemosyne::debug_graph();
 
     let initial_addr = PhysAddr(0x1000);
     println!("Initial address verified: {:?}", initial_addr);

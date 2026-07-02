@@ -7,6 +7,8 @@ extern crate alloc;
 pub mod addr;
 /// Error handling types.
 pub mod error;
+/// Semantic memory types.
+pub mod memory;
 /// Capability-based security types.
 pub mod security;
 /// Synapse IPC types.

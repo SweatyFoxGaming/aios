@@ -111,6 +111,9 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
     unsafe {
         crate::arch::x86_64::apic::end_of_interrupt();
     }
+
+    // Trigger the scheduler
+    crate::sched::SCHEDULER.lock().schedule();
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {

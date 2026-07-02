@@ -233,6 +233,7 @@ pub extern "C" fn _start() -> ! {
 
     // Load a mock userspace process
     sched::process::load("Shell", alloc::vec![0x90, 0x90, 0x90]);
+    drivers::display::aura::render_emblem();
     fs::shell::start();
 
     // Test Honey-Intent detection

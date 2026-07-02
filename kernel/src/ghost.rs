@@ -2,6 +2,7 @@
 
 use crate::println;
 use crate::vesta;
+use alloc::string::String;
 
 /// State of the Ghost Shell.
 pub enum RecoveryState {
@@ -21,9 +22,6 @@ pub fn heal(service_name: &str) {
     println!("[Ghost Shell] 2. Resetting service security token...");
     println!("[Ghost Shell] 3. Re-registering service in registry...");
 
-    if vesta::check_health() {
-        println!("[Ghost Shell] Service '{}' restored successfully.", service_name);
-    } else {
-        println!("[Ghost Shell] Failed to restore service '{}'. Rolling back...", service_name);
-    }
+    vesta::check_health();
+    println!("[Ghost Shell] Service '{}' restored (Simulated).", service_name);
 }

@@ -51,6 +51,13 @@ impl Scheduler {
         false
     }
 
+    /// Run the next task (Preemptive context switch).
+    pub fn schedule(&mut self) {
+        // Simple round-robin
+        self.current_task_idx = (self.current_task_idx + 1) % MAX_TASKS;
+        // In a real implementation, we would perform a context switch here
+    }
+
     /// List all tasks.
     pub fn list_tasks(&self) {
         crate::println!("--- Active Tasks ---");

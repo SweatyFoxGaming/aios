@@ -14,6 +14,8 @@ pub mod aegis;
 pub mod arch;
 /// Audit logging.
 pub mod audit;
+/// WASM skill runtime.
+pub mod calliope;
 /// Hardware drivers.
 pub mod drivers;
 /// Self-awareness and identity.
@@ -22,6 +24,8 @@ pub mod ego;
 pub mod events;
 /// File systems.
 pub mod fs;
+/// Automated recovery shell.
+pub mod ghost;
 /// Intent parser.
 pub mod hermes;
 /// System installer.
@@ -178,6 +182,7 @@ pub extern "C" fn _start() -> ! {
                 framebuffer.width, framebuffer.height
             );
             drivers::display::init(framebuffer);
+            drivers::display::engine::init();
         }
     }
 
@@ -191,6 +196,7 @@ pub extern "C" fn _start() -> ! {
     net::init();
     pkg::init();
     updater::check();
+    calliope::init();
 
     // Set final ego state
     ego::set_state(ego::PresenceState::Idle);

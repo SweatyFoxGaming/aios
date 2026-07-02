@@ -1,5 +1,7 @@
 //! Aura: Framebuffer-based display driver for Phoenix OS.
 
+pub mod aura;
+pub mod engine;
 use limine::Framebuffer;
 use spin::Mutex;
 

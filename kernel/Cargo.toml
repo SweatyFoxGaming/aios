@@ -13,6 +13,7 @@ x86_64 = "0.14.11"
 linked_list_allocator = "0.10.5"
 raw-cpuid = "10.7.0"
 pc-keyboard = "0.7.0"
+goblin = { version = "0.7.1", default-features = false, features = ["elf64", "elf32", "endian_fd"] }
 
 [lints]
 workspace = true

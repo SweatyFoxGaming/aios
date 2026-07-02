@@ -35,3 +35,4 @@ pub trait FileSystem: Send + Sync {
 pub mod ramfs;
 pub mod phoenixfs;
 pub mod shell;
+pub mod elf;

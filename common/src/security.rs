@@ -21,6 +21,13 @@ pub enum Capability {
     AuditWrite,
 }
 
+/// A hardware-encrypted secret.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Secret {
+    /// The encrypted data.
+    pub data: [u8; 32],
+}
+
 /// A token that grants a set of capabilities.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {

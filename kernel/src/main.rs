@@ -8,6 +8,8 @@
 
 extern crate alloc;
 
+/// Code integrity verification.
+pub mod aegis;
 /// Architecture-specific code.
 pub mod arch;
 /// Audit logging.
@@ -22,6 +24,8 @@ pub mod events;
 pub mod fs;
 /// Intent parser.
 pub mod hermes;
+/// System installer.
+pub mod install;
 /// Context engine.
 pub mod kairos;
 /// Significance-based pruning.
@@ -30,20 +34,32 @@ pub mod lethe;
 pub mod mem;
 /// Semantic memory.
 pub mod mnemosyne;
+/// Networking stack.
+pub mod net;
 mod panic;
+/// Package manager.
+pub mod pkg;
 /// Resource governor.
 pub mod pulse;
+/// Recovery tools.
+pub mod recovery;
 /// Process scheduling.
 pub mod sched;
+/// Anomalous intent detection.
+pub mod sentinel;
 /// Serial communication.
 pub mod serial;
 /// Service registry and discovery.
 pub mod services;
-/// Synapse IPC.
-pub mod synapse;
 /// System calls.
 pub mod syscall;
+/// Synapse IPC.
+pub mod synapse;
 mod test_runner;
+/// Update system.
+pub mod updater;
+/// Hardware-rooted trust.
+pub mod vault;
 /// AI homeostasis.
 pub mod vesta;
 
@@ -112,7 +128,11 @@ pub extern "C" fn _start() -> ! {
     // 5. Silicon Morphing - optimize hot paths
     arch::x86_64::morph::morph(&hardware_fp);
 
-    // 6. Setup Security Tokens - requires heap if using Vec or complex types
+    // 6. Security & Integrity (Aegis & Vault)
+    aegis::init();
+    let _ = vault::init();
+
+    // 7. Setup Security Tokens - requires heap if using Vec or complex types
     let mut kernel_token = Token::empty(0);
     kernel_token.grant(Capability::ServiceRegister);
     kernel_token.grant(Capability::MemAlloc);
@@ -121,7 +141,7 @@ pub extern "C" fn _start() -> ! {
     kernel_token.grant(Capability::AuditWrite);
     kernel_token.grant(Capability::HardwareInfo);
 
-    // 7. Register foundational services - requires heap for ServiceRegistry (Vec)
+    // 8. Register foundational services - requires heap for ServiceRegistry (Vec)
     let _ = services::register("KernelCore", 1, &kernel_token);
     let _ = services::register("LogService", 1, &kernel_token);
     let _ = services::register_secure("MemoryService", 1, Capability::MemAlloc, &kernel_token);
@@ -139,8 +159,14 @@ pub extern "C" fn _start() -> ! {
     let _ = services::register("FilesystemService", 1, &kernel_token);
     let _ = services::register("OracleService", 1, &kernel_token);
     let _ = services::register("LetheService", 1, &kernel_token);
+    let _ = services::register("AegisService", 1, &kernel_token);
+    let _ = services::register("VaultService", 1, &kernel_token);
 
-    // 8. Initialize scheduler
+    // Register Honey-Intents
+    let _ = services::register_decoy("RestrictedDebugService", &kernel_token);
+    let _ = services::register_decoy("GlobalMemoryWrite", &kernel_token);
+
+    // 9. Initialize scheduler
     sched::init();
     println!("Scheduler initialized.");
 
@@ -157,6 +183,14 @@ pub extern "C" fn _start() -> ! {
 
     // Initialize sensory hardware discovery (PCI)
     arch::x86_64::pci::scan_bus();
+
+    // Initialize Mouse and Storage
+    drivers::input::mouse::init();
+    drivers::storage::ramdisk::init();
+    fs::phoenixfs::init();
+    net::init();
+    pkg::init();
+    updater::check();
 
     // Set final ego state
     ego::set_state(ego::PresenceState::Idle);
@@ -187,6 +221,17 @@ pub extern "C" fn _start() -> ! {
 
     // Test Syscall Interface (Oracle)
     let _ = syscall::handle_syscall(1, 0, 0);
+
+    // Verify Integrity
+    let _ = aegis::verify();
+
+    // Load a mock userspace process
+    sched::process::load("Shell", alloc::vec![0x90, 0x90, 0x90]);
+    fs::shell::start();
+
+    // Test Honey-Intent detection
+    let mock_user_token = Token::empty(100);
+    let _ = services::find("RestrictedDebugService", &mock_user_token);
 
     // Final initialization logs
     arch::x86_64::fingerprint::log_info(&hardware_fp);

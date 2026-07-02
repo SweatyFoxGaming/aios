@@ -16,6 +16,8 @@ pub struct ServiceEntry {
     pub version: u32,
     /// The required capability to use this service.
     pub required_capability: Option<Capability>,
+    /// Whether this is a decoy "Honey-Service".
+    pub is_decoy: bool,
 }
 
 lazy_static! {
@@ -45,17 +47,21 @@ impl ServiceRegistry {
         }
 
         self.services.push(*entry);
-        crate::audit::log(
-            token,
-            "Register Service: ".to_string() + entry.name,
-            "Success",
-        );
+        crate::audit::log(token, "Register Service: ".to_string() + entry.name, "Success");
         true
     }
 
     fn find(&self, name: &'static str, token: &Token) -> Option<ServiceEntry> {
         for service in &self.services {
             if service.name == name {
+                // Sentinel check
+                crate::sentinel::analyze_intent(token, name, "FindService");
+
+                if service.is_decoy {
+                    // Access to honey-service
+                    return None;
+                }
+
                 // Verify caller has required capability for this service
                 if let Some(cap) = service.required_capability {
                     if !token.has(cap) {
@@ -83,6 +89,7 @@ pub fn register(name: &'static str, version: u32, token: &Token) -> bool {
             name,
             version,
             required_capability: None,
+            is_decoy: false,
         },
         token,
     )
@@ -96,6 +103,21 @@ pub fn register_secure(name: &'static str, version: u32, cap: Capability, token:
             name,
             version,
             required_capability: Some(cap),
+            is_decoy: false,
+        },
+        token,
+    )
+}
+
+/// Register a decoy "Honey-Service" for security scanning detection.
+#[must_use]
+pub fn register_decoy(name: &'static str, token: &Token) -> bool {
+    REGISTRY.lock().register(
+        &ServiceEntry {
+            name,
+            version: 0,
+            required_capability: None,
+            is_decoy: true,
         },
         token,
     )
@@ -112,11 +134,13 @@ pub fn list_services() {
     let registry = REGISTRY.lock();
     crate::println!("--- Registered Services ---");
     for service in &registry.services {
+        let decoy_flag = if service.is_decoy { "[DECOY]" } else { "" };
         crate::println!(
-            "Service: {} (v{}) [ReqCap: {:?}]",
+            "Service: {} (v{}) [ReqCap: {:?}] {}",
             service.name,
             service.version,
-            service.required_capability
+            service.required_capability,
+            decoy_flag
         );
     }
     crate::println!("---------------------------");

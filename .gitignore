@@ -2,3 +2,7 @@ target/
 **/*.rs.bk
 .DS_Store
 boot/limine/
+*.txt
+*.bak
+*.bk
+bin/

@@ -26,3 +26,25 @@ All notable changes to Phoenix OS will be documented in this file.
 ### Fixed
 - Fixed kernel build failure by adding `panic = "abort"` to workspace profiles.
 - Fixed `common` crate test failure by making `#![no_std]` conditional.
+
+## [0.2.0] - Invincible Defense & Core Complete
+
+### Added
+- PS/2 Mouse driver implementation.
+- RAM Disk storage driver for persistent storage simulation.
+- PhoenixFS: Native filesystem with superblock and formatting support.
+- Oracle Syscall Interface: Expanded API for userspace interaction.
+- Userspace Runtime: Process management and loading capabilities.
+- Native Shell: Interactive command-line interface.
+- Aether Networking: Foundational TCP/IP stack.
+- Hephaestus Package Manager (PPM).
+- System Installer, Recovery Tools, and OTA Update mechanism.
+- Aegis: Code integrity verification foundation.
+- The Vault: TPM and hardware-rooted trust foundation.
+- Pulse: Resource governor for low-end hardware optimization.
+- Chrono: Precision timing foundation with APIC support.
+- Iris: Semantic VFS with RamFS.
+- Synapse: Structured IPC for JARVIS cognitive orchestration.
+- Mnemosyne: Semantic memory and knowledge graph store.
+- Vesta: Homeostasis manager for AI module stability.
+- Silicon Morphing: Hardware-adaptive hot-path optimization.

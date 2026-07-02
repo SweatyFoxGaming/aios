@@ -24,6 +24,8 @@ pub mod fs;
 pub mod hermes;
 /// Context engine.
 pub mod kairos;
+/// Significance-based pruning.
+pub mod lethe;
 /// Memory management.
 pub mod mem;
 /// Semantic memory.
@@ -107,7 +109,10 @@ pub extern "C" fn _start() -> ! {
     // 4. Gather hardware identity - requires heap for String
     let hardware_fp = arch::x86_64::fingerprint::gather();
 
-    // 5. Setup Security Tokens - requires heap if using Vec or complex types
+    // 5. Silicon Morphing - optimize hot paths
+    arch::x86_64::morph::morph(&hardware_fp);
+
+    // 6. Setup Security Tokens - requires heap if using Vec or complex types
     let mut kernel_token = Token::empty(0);
     kernel_token.grant(Capability::ServiceRegister);
     kernel_token.grant(Capability::MemAlloc);
@@ -116,7 +121,7 @@ pub extern "C" fn _start() -> ! {
     kernel_token.grant(Capability::AuditWrite);
     kernel_token.grant(Capability::HardwareInfo);
 
-    // 6. Register foundational services - requires heap for ServiceRegistry (Vec)
+    // 7. Register foundational services - requires heap for ServiceRegistry (Vec)
     let _ = services::register("KernelCore", 1, &kernel_token);
     let _ = services::register("LogService", 1, &kernel_token);
     let _ = services::register_secure("MemoryService", 1, Capability::MemAlloc, &kernel_token);
@@ -133,8 +138,9 @@ pub extern "C" fn _start() -> ! {
     let _ = services::register("DisplayService", 1, &kernel_token);
     let _ = services::register("FilesystemService", 1, &kernel_token);
     let _ = services::register("OracleService", 1, &kernel_token);
+    let _ = services::register("LetheService", 1, &kernel_token);
 
-    // 7. Initialize scheduler
+    // 8. Initialize scheduler
     sched::init();
     println!("Scheduler initialized.");
 
@@ -193,6 +199,7 @@ pub extern "C" fn _start() -> ! {
     kairos::log_status();
     vesta::log_status();
     mnemosyne::debug_graph();
+    lethe::log_status();
 
     let initial_addr = PhysAddr(0x1000);
     println!("Initial address verified: {:?}", initial_addr);

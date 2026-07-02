@@ -49,13 +49,17 @@ impl Color {
 /// Handle for the Aura display system.
 pub struct AuraDisplay {
     framebuffer: &'static Framebuffer,
+    overlay_active: bool,
 }
 
 impl AuraDisplay {
     /// Create a new Aura display instance.
     #[must_use]
     pub const fn new(fb: &'static Framebuffer) -> Self {
-        Self { framebuffer: fb }
+        Self {
+            framebuffer: fb,
+            overlay_active: false,
+        }
     }
 
     /// Clear the screen with a specific color.
@@ -97,6 +101,20 @@ impl AuraDisplay {
             }
         }
     }
+
+    /// Toggles the "Ghost" overlay.
+    pub fn toggle_overlay(&mut self) {
+        self.overlay_active = !self.overlay_active;
+        if self.overlay_active {
+            // Render the ghost overlay border
+            self.draw_rect(0, 0, self.framebuffer.width, 5, Color::CYAN);
+            crate::println!("[Aura] Ghost Shell Overlay Activated.");
+        } else {
+            // Remove border
+            self.draw_rect(0, 0, self.framebuffer.width, 5, Color::BLACK);
+            crate::println!("[Aura] Ghost Shell Overlay Deactivated.");
+        }
+    }
 }
 
 /// Global access to the primary display.
@@ -113,4 +131,11 @@ pub fn init(fb: &'static Framebuffer) {
     aura.draw_rect(center_x - 10, center_y - 10, 20, 20, Color::CYAN);
 
     *DISPLAY.lock() = Some(aura);
+}
+
+/// Helper to toggle the ghost shell from other modules.
+pub fn toggle_ghost_shell() {
+    if let Some(ref mut aura) = *DISPLAY.lock() {
+        aura.toggle_overlay();
+    }
 }

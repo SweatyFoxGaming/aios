@@ -32,13 +32,16 @@ pub fn handle_interrupt() {
                 DecodedKey::Unicode(character) => {
                     if character == '\n' {
                         dispatch_buffer();
+                    } else if character == '`' {
+                        // Toggle Ghost Shell with backtick
+                        crate::drivers::display::toggle_ghost_shell();
                     } else {
                         INPUT_BUFFER.lock().push(character);
                         // Echo to serial for now
-                        crate::print!("{}", character);
+                        crate::print!("{character}");
                     }
                 }
-                DecodedKey::RawKey(key) => println!("Raw Key: {:?}", key),
+                DecodedKey::RawKey(key) => println!("Raw Key: {key:?}"),
             }
         }
     }
@@ -48,7 +51,7 @@ pub fn handle_interrupt() {
 fn dispatch_buffer() {
     let mut buffer = INPUT_BUFFER.lock();
     if !buffer.is_empty() {
-        println!("\n[Nerve] Intent Captured: {}", *buffer);
+        println!("\n[Nerve] Intent Captured: {buffer}");
         let intent = crate::hermes::parse(&buffer);
         crate::hermes::dispatch(&intent);
         buffer.clear();

@@ -24,8 +24,11 @@ pub fn monitor() {
         crate::events::publish("Pulse: CRITICAL Memory Pressure".to_string(), 0.9);
         // Trigger self-optimization (Dreaming state)
         crate::ego::set_state(crate::ego::PresenceState::Dreaming);
+        // Invoke Lethe to prune memory
+        crate::lethe::prune();
     } else if pressure.memory > 0.5 {
         crate::events::publish("Pulse: Moderate Memory Pressure".to_string(), 0.6);
+        crate::lethe::prune();
     }
 }
 

@@ -3,6 +3,7 @@ pub mod apic;
 pub mod fingerprint;
 pub mod gdt;
 pub mod interrupts;
+pub mod morph;
 pub mod pci;
 pub mod time;
 

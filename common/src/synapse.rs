@@ -2,6 +2,15 @@
 
 use alloc::string::String;
 
+/// Represents a physical memory frame owned by a Synapse message.
+#[derive(Debug, Clone)]
+pub struct SynapseFrame {
+    /// Physical start address of the frame.
+    pub phys_addr: u64,
+    /// Size of the data in the frame.
+    pub size: usize,
+}
+
 /// Represents a message sent over the Synapse bus.
 #[derive(Debug, Clone)]
 pub struct Message {
@@ -13,6 +22,8 @@ pub struct Message {
     pub intent: String,
     /// The structured payload (placeholder for now).
     pub payload: Option<String>,
+    /// Optional zero-copy data frame.
+    pub frame: Option<SynapseFrame>,
 }
 
 impl Message {
@@ -24,6 +35,14 @@ impl Message {
             target,
             intent,
             payload: None,
+            frame: None,
         }
+    }
+
+    /// Attach a zero-copy frame to the message.
+    #[must_use]
+    pub const fn with_frame(mut self, phys_addr: u64, size: usize) -> Self {
+        self.frame = Some(SynapseFrame { phys_addr, size });
+        self
     }
 }

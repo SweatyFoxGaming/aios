@@ -22,8 +22,22 @@ pub fn send(msg: Message) {
     }
 
     // Log the intent to the neural bus for visibility
+    let frame_info = msg
+        .frame
+        .as_ref()
+        .map_or_else(alloc::string::String::new, |f| {
+            alloc::format!(" [Zero-Copy Frame: 0x{:x}, {} bytes]", f.phys_addr, f.size)
+        });
+
     crate::events::publish(
-        "Synapse: ".to_string() + msg.sender + " -> " + msg.target + " [" + &msg.intent + "]",
+        "Synapse: ".to_string()
+            + msg.sender
+            + " -> "
+            + msg.target
+            + " ["
+            + &msg.intent
+            + "]"
+            + &frame_info,
         0.3,
     );
 
@@ -41,7 +55,15 @@ pub fn debug_bus() {
     let bus = SYNAPSE_BUS.lock();
     crate::println!("--- Synapse IPC Backlog ---");
     for (i, msg) in bus.iter().enumerate() {
-        crate::println!("[{}] {} -> {}: {}", i, msg.sender, msg.target, msg.intent);
+        let frame_status = if msg.frame.is_some() { "[ZC]" } else { "" };
+        crate::println!(
+            "[{}] {} -> {}: {} {}",
+            i,
+            msg.sender,
+            msg.target,
+            msg.intent,
+            frame_status
+        );
     }
     crate::println!("---------------------------");
 }

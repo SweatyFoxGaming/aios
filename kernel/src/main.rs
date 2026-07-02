@@ -183,6 +183,7 @@ pub extern "C" fn _start() -> ! {
             );
             drivers::display::init(framebuffer);
             drivers::display::engine::init();
+            drivers::display::transcendent::init();
         }
     }
 

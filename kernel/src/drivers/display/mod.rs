@@ -2,6 +2,7 @@
 
 pub mod aura;
 pub mod engine;
+pub mod transcendent;
 use limine::Framebuffer;
 use spin::Mutex;
 

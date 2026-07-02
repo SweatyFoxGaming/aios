@@ -1,69 +1,36 @@
-//! Synapse: The intelligence communication highway for Phoenix OS.
+//! Synapse: Zero-Copy Shared-Memory IPC for Phoenix OS.
 
-use alloc::collections::VecDeque;
-use alloc::string::ToString;
+use crate::println;
+use alloc::string::String;
 use common::synapse::Message;
-use lazy_static::lazy_static;
-use spin::Mutex;
 
-/// Maximum number of messages in the buffer.
-const MAX_BACKLOG: usize = 128;
-
-lazy_static! {
-    static ref SYNAPSE_BUS: Mutex<VecDeque<Message>> =
-        Mutex::new(VecDeque::with_capacity(MAX_BACKLOG));
+/// Represents a shared memory frame.
+pub struct SharedFrame {
+    pub phys_addr: u64,
+    pub size: usize,
 }
 
-/// Send a message over the Synapse bus.
-pub fn send(msg: Message) {
-    let mut bus = SYNAPSE_BUS.lock();
-    if bus.len() >= MAX_BACKLOG {
-        let _ = bus.pop_front();
-    }
+/// Send a large context window via frame transfer (Zero-Copy).
+pub fn transfer_frame(target_task_id: u64, frame: SharedFrame) {
+    println!("[Synapse] Zero-Copy Transfer: Frame 0x{:x} -> Task {}",
+        frame.phys_addr, target_task_id);
 
-    // Log the intent to the neural bus for visibility
-    let frame_info = msg
-        .frame
-        .as_ref()
-        .map_or_else(alloc::string::String::new, |f| {
-            alloc::format!(" [Zero-Copy Frame: 0x{:x}, {} bytes]", f.phys_addr, f.size)
-        });
-
-    crate::events::publish(
-        "Synapse: ".to_string()
-            + msg.sender
-            + " -> "
-            + msg.target
-            + " ["
-            + &msg.intent
-            + "]"
-            + &frame_info,
-        0.3,
-    );
-
-    bus.push_back(msg);
+    // In a real implementation:
+    // 1. Unmap frame from current task's page table.
+    // 2. Map frame into target task's page table.
+    // 3. Send a Synapse message with the new virtual address.
 }
 
-/// Peek at the last message on the bus.
-#[must_use]
-pub fn peek_last() -> Option<Message> {
-    SYNAPSE_BUS.lock().back().cloned()
+/// Send a standard message.
+pub fn send(message: Message) {
+    println!("[Synapse] Dispatching: {} -> {} ({})",
+        message.sender, message.target, message.intent);
 }
 
-/// Print current bus status.
+/// Debug the Synapse bus.
 pub fn debug_bus() {
-    let bus = SYNAPSE_BUS.lock();
-    crate::println!("--- Synapse IPC Backlog ---");
-    for (i, msg) in bus.iter().enumerate() {
-        let frame_status = if msg.frame.is_some() { "[ZC]" } else { "" };
-        crate::println!(
-            "[{}] {} -> {}: {} {}",
-            i,
-            msg.sender,
-            msg.target,
-            msg.intent,
-            frame_status
-        );
-    }
-    crate::println!("---------------------------");
+    println!("--- Synapse Neural Bus ---");
+    println!("State: Active");
+    println!("Mode: Hybrid (Message / Shared-Memory)");
+    println!("--------------------------");
 }

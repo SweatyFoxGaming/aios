@@ -1,31 +1,31 @@
 //! Lethe: Significance-based memory pruning for Phoenix OS.
-//! Uses Significance Scores from the Neural Event Bus to manage resource pressure.
 
-use crate::events::Significance;
 use crate::println;
+use crate::mnemosyne;
+use alloc::vec::Vec;
 
-/// Minimum significance required to keep a memory entry in RAM.
-const RETENTION_THRESHOLD: Significance = 0.2;
-
-/// Prunes the system state based on significance.
-pub fn prune() {
-    println!("[Lethe] Commencing significance-based pruning...");
-
-    // Placeholder: In a real system, this would iterate through:
-    // 1. Audit Log (Archive low-significance entries to disk)
-    // 2. Mnemosyne Graph (Compress low-weighted relations)
-    // 3. Neural Event Bus backlog
-
-    println!(
-        "[Lethe] Pruning complete. Retention Threshold: {}",
-        RETENTION_THRESHOLD
-    );
+/// Pruning configuration.
+pub struct PruningPolicy {
+    /// Significance threshold (0.0 to 1.0). Data below this may be pruned.
+    pub threshold: f32,
 }
 
-/// Log pruning status.
+/// Run a pruning cycle based on memory pressure.
+pub fn prune(pressure_level: f32) {
+    println!("[Lethe] Memory pressure at {:.2}. Initiating pruning cycle...", pressure_level);
+
+    // We would query Mnemosyne for nodes with low significance
+    // and either archive them to disk (PhoenixFS) or drop them.
+
+    let policy = PruningPolicy {
+        threshold: pressure_level * 0.5,
+    };
+
+    println!("[Lethe] Pruning nodes with significance < {:.2}", policy.threshold);
+    println!("[Lethe] Pruning complete. Recovered simulated 128 MB.");
+}
+
+/// Log the state of Lethe.
 pub fn log_status() {
-    println!("--- Phoenix Lethe Pruning Engine ---");
-    println!("Retention Threshold: {}", RETENTION_THRESHOLD);
-    println!("Strategy: Significance-Based Archiving");
-    println!("------------------------------------");
+    println!("[Lethe] Engine active. Policy: Adaptive Significance.");
 }

@@ -1,51 +1,44 @@
-//! Hermes: Raw intent parser for Phoenix OS.
-//! Translates input into structured Synapse messages.
+//! Hermes: Intent parsing and orchestration for JARVIS.
 
 use crate::println;
+use crate::synapse;
 use alloc::string::String;
 use common::synapse::Message;
 
-/// Possible user intents.
-#[derive(Debug, Clone)]
-pub enum Intent {
-    /// Request to research a topic.
-    Research(String),
-    /// Request to perform a system maintenance task.
-    Maintain(String),
-    /// Request to develop code.
-    Develop(String),
-    /// Unknown or unparsed intent.
-    Unknown(String),
+/// Represents a parsed intent.
+pub struct Intent {
+    pub raw: String,
+    pub action: String,
+    pub significance: f32,
 }
 
-/// Parses a raw string into a structured Intent.
-#[must_use]
+/// Parse raw input into a structured intent.
 pub fn parse(input: &str) -> Intent {
-    if input.contains("research") {
-        Intent::Research(String::from(input))
-    } else if input.contains("clean") || input.contains("fix") {
-        Intent::Maintain(String::from(input))
-    } else if input.contains("build") || input.contains("code") {
-        Intent::Develop(String::from(input))
+    println!("[Hermes] Parsing intent: '{}'", input);
+
+    // In a real system, this would use a local LLM or NLP model
+    let action = if input.contains("research") {
+        "KnowledgeQuery"
+    } else if input.contains("fix") || input.contains("heal") {
+        "SelfRepair"
     } else {
-        Intent::Unknown(String::from(input))
+        "GeneralInteraction"
+    };
+
+    Intent {
+        raw: String::from(input),
+        action: String::from(action),
+        significance: 0.8,
     }
 }
 
-/// Dispatches an intent via the Synapse bus.
+/// Dispatch an intent to the appropriate system service.
 pub fn dispatch(intent: &Intent) {
-    let (target, description) = match *intent {
-        Intent::Research(ref s) => ("ResearchAgent", s),
-        Intent::Maintain(ref s) => ("MaintenanceAgent", s),
-        Intent::Develop(ref s) => ("CodingAgent", s),
-        Intent::Unknown(ref s) => ("Commander", s),
-    };
+    println!("[Hermes] Dispatching action: {}", intent.action);
 
-    println!("[Hermes] Dispatching intent: {target} -> {description}");
-
-    // Update context engine
-    crate::kairos::set_intent(description);
-
-    // Send Synapse message
-    crate::synapse::send(Message::new("Hermes", target, description.clone()));
+    if intent.action == "SelfRepair" {
+        crate::ghost::heal("TargetedService");
+    } else {
+        synapse::send(Message::new("Hermes", "CognitiveCore", intent.action.clone()));
+    }
 }

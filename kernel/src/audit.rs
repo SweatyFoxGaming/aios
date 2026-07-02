@@ -11,7 +11,7 @@ use spin::Mutex;
 /// An entry in the audit log.
 #[derive(Debug, Clone)]
 pub struct AuditEntry {
-    /// Timestamp (placeholder for now).
+    /// Ticks since boot.
     pub timestamp: u64,
     /// The token ID that initiated the action.
     pub token_id: u64,
@@ -52,7 +52,7 @@ pub fn log(token: &Token, action: String, outcome: &'static str) {
     let new_hash = calculate_hash(prev_hash, &action);
 
     let entry = AuditEntry {
-        timestamp: 0, // TODO: Implement RTC
+        timestamp: crate::arch::x86_64::time::get_uptime(),
         token_id: token.id,
         action,
         outcome,

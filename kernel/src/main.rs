@@ -18,6 +18,8 @@ pub mod drivers;
 pub mod ego;
 /// Neural event bus.
 pub mod events;
+/// File systems.
+pub mod fs;
 /// Intent parser.
 pub mod hermes;
 /// Context engine.
@@ -71,9 +73,9 @@ pub extern "C" fn _start() -> ! {
 
     println!("Phoenix OS Kernel booting...");
 
-    // 1. Initialize architecture (GDT, IDT) - does not require heap
+    // 1. Initialize architecture (GDT, IDT, Time) - does not require heap
     arch::init();
-    println!("Architecture initialized (GDT, IDT).");
+    println!("Architecture initialized (GDT, IDT, PIT).");
 
     // 2. Discover physical memory layout and HHDM
     let phys_mem_offset = HHDM_REQUEST.get_response().get().map_or_else(
@@ -122,6 +124,7 @@ pub extern "C" fn _start() -> ! {
     let _ = services::register("EgoService", 1, &kernel_token);
     let _ = services::register("PulseService", 1, &kernel_token);
     let _ = services::register("DisplayService", 1, &kernel_token);
+    let _ = services::register("FilesystemService", 1, &kernel_token);
 
     // 7. Initialize scheduler
     sched::init();
@@ -138,6 +141,9 @@ pub extern "C" fn _start() -> ! {
         }
     }
 
+    // Initialize sensory hardware discovery (PCI)
+    arch::x86_64::pci::scan_bus();
+
     // Set final ego state
     ego::set_state(ego::PresenceState::Idle);
 
@@ -151,7 +157,7 @@ pub extern "C" fn _start() -> ! {
     let intent = hermes::parse(raw_input);
     hermes::dispatch(&intent);
 
-    // Final checks
+    // Start resource monitoring
     pulse::monitor();
     vesta::check_health();
 

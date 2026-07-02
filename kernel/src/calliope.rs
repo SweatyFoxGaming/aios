@@ -6,7 +6,9 @@ use alloc::vec::Vec;
 
 /// Represents a JARVIS Skill (WASM-based).
 pub struct Skill {
+    /// The name of the skill.
     pub name: String,
+    /// The WASM bytecode for the skill.
     pub bytecode: Vec<u8>,
 }
 
@@ -17,8 +19,11 @@ pub fn init() {
 
 /// Execute a WASM skill in a sandbox.
 pub fn execute(skill: &Skill) -> Result<(), &'static str> {
-    println!("[Calliope] Executing skill '{}' ({} bytes) in WASM sandbox...",
-        skill.name, skill.bytecode.len());
+    println!(
+        "[Calliope] Executing skill '{}' ({} bytes) in WASM sandbox...",
+        skill.name,
+        skill.bytecode.len()
+    );
 
     // In a real implementation, we would use a library like wasmi
     // to execute the bytecode and provide host imports for Synapse.

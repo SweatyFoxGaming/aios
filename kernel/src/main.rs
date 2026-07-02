@@ -55,10 +55,10 @@ pub mod sentinel;
 pub mod serial;
 /// Service registry and discovery.
 pub mod services;
-/// System calls.
-pub mod syscall;
 /// Synapse IPC.
 pub mod synapse;
+/// System calls.
+pub mod syscall;
 mod test_runner;
 /// Update system.
 pub mod updater;

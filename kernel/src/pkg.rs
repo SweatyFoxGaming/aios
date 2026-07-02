@@ -2,11 +2,12 @@
 
 use crate::println;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 /// Represents a package.
 pub struct Package {
+    /// The name of the package.
     pub name: String,
+    /// The version string of the package.
     pub version: String,
 }
 

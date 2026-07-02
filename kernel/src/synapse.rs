@@ -1,13 +1,14 @@
 //! Synapse: Zero-Copy Shared-Memory IPC for Phoenix OS.
 
 use crate::println;
-use alloc::string::String;
 use alloc::string::ToString;
 use common::synapse::Message;
 
 /// Represents a shared memory frame.
 pub struct SharedFrame {
+    /// Physical start address of the frame.
     pub phys_addr: u64,
+    /// Size of the frame in bytes.
     pub size: usize,
 }
 
@@ -19,10 +20,16 @@ pub fn transfer_frame(target_task_id: u64, frame: SharedFrame) {
     );
 
     // 1. Simulate unmapping from current task
-    println!("[Synapse] Unmapping 0x{:x} from current context...", frame.phys_addr);
+    println!(
+        "[Synapse] Unmapping 0x{:x} from current context...",
+        frame.phys_addr
+    );
 
     // 2. Simulate mapping into target task
-    println!("[Synapse] Mapping 0x{:x} into Task {} context...", frame.phys_addr, target_task_id);
+    println!(
+        "[Synapse] Mapping 0x{:x} into Task {} context...",
+        frame.phys_addr, target_task_id
+    );
 
     // 3. Dispatch notification message
     let msg = Message {
@@ -39,8 +46,10 @@ pub fn transfer_frame(target_task_id: u64, frame: SharedFrame) {
 
 /// Send a standard message.
 pub fn send(message: Message) {
-    println!("[Synapse] Dispatching: {} -> {} ({})",
-        message.sender, message.target, message.intent);
+    println!(
+        "[Synapse] Dispatching: {} -> {} ({})",
+        message.sender, message.target, message.intent
+    );
 }
 
 /// Debug the Synapse bus.

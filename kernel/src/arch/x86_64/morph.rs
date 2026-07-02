@@ -38,7 +38,9 @@ fn avx_optimized_memset(dst: *mut u8, val: u8, len: usize) {
 
 /// Global dispatch table for morphed functions.
 pub struct MorphTable {
+    /// Hot-path memory copy function.
     pub memcpy: HotPathFn,
+    /// Hot-path memory set function.
     pub memset: HotPathFillFn,
 }
 

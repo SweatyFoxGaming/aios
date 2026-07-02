@@ -5,8 +5,10 @@ use spin::Mutex;
 
 /// Current system context.
 pub struct Context {
+    /// The current focus/attention point of the user.
     pub attention_point: (usize, usize),
-    pub system_mood: f32, // 0.0 to 1.0 (Calm to Alert)
+    /// The overall system mood (0.0 to 1.0, Calm to Alert).
+    pub system_mood: f32,
 }
 
 static CONTEXT: Mutex<Context> = Mutex::new(Context {
@@ -29,6 +31,8 @@ pub fn set_attention_point(x: usize, y: usize) {
 /// Log situational awareness status.
 pub fn log_status() {
     let ctx = CONTEXT.lock();
-    println!("[Kairòs] Context active. Mood: {:.2}, Focus: {:?}",
-        ctx.system_mood, ctx.attention_point);
+    println!(
+        "[Kairòs] Context active. Mood: {:.2}, Focus: {:?}",
+        ctx.system_mood, ctx.attention_point
+    );
 }

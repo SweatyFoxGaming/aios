@@ -8,10 +8,15 @@ static mut MOUSE_CYCLE: u8 = 0;
 
 /// Mouse status flags.
 pub struct MouseState {
+    /// X-axis movement.
     pub x: i32,
+    /// Y-axis movement.
     pub y: i32,
+    /// Left button pressed.
     pub left: bool,
+    /// Right button pressed.
     pub right: bool,
+    /// Middle button pressed.
     pub middle: bool,
 }
 
@@ -50,7 +55,7 @@ pub fn init() {
 
     mouse_wait(1);
     unsafe { status_port.write(0x20) }; // Get command byte
-    let mut status = mouse_read() | 2;
+    let status = mouse_read() | 2;
     mouse_wait(1);
     unsafe { status_port.write(0x60) }; // Set command byte
     mouse_wait(1);
@@ -101,6 +106,9 @@ pub fn handle_interrupt() {
                     if (MOUSE_DATA[0] & 0x20) != 0 {
                         y -= 256;
                     }
+
+                    let _ = x;
+                    let _ = y;
 
                     // Here we would dispatch a mouse event
                     // println!("Mouse Move: dx={}, dy={}", x, y);

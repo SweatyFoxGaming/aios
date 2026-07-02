@@ -1,8 +1,8 @@
 //! Ambient UI Materialization for Phoenix OS.
 
 use crate::drivers::display::aura;
-use crate::println;
 use crate::kairos;
+use crate::println;
 
 /// Materialize a pattern at the user's focus point.
 pub fn materialize_at_focus() {

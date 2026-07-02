@@ -7,8 +7,11 @@ use common::synapse::Message;
 
 /// Represents a parsed intent.
 pub struct Intent {
+    /// The raw input string.
     pub raw: String,
+    /// The parsed action/command.
     pub action: String,
+    /// The calculated significance of the intent (0.0 to 1.0).
     pub significance: f32,
 }
 
@@ -39,6 +42,10 @@ pub fn dispatch(intent: &Intent) {
     if intent.action == "SelfRepair" {
         crate::ghost::heal("TargetedService");
     } else {
-        synapse::send(Message::new("Hermes", "CognitiveCore", intent.action.clone()));
+        synapse::send(Message::new(
+            "Hermes",
+            "CognitiveCore",
+            intent.action.clone(),
+        ));
     }
 }

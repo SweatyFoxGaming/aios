@@ -1,9 +1,9 @@
 //! Vesta: Homeostasis and AI health manager for Phoenix OS.
 //! Monitors agent consistency and resource leakage.
 
+use crate::ghost;
 use crate::println;
 use crate::services;
-use crate::ghost;
 use alloc::string::ToString;
 
 /// Checks for inconsistencies or "exhaustion" in AI modules.

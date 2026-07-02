@@ -1,13 +1,15 @@
 //! Userspace process management for Phoenix OS.
 
 use crate::println;
-use crate::sched::task::Task;
 use alloc::vec::Vec;
 
 /// Represents a userspace process.
 pub struct Process {
+    /// Unique process identifier.
     pub id: u64,
+    /// Friendly name of the process.
     pub name: &'static str,
+    /// Process executable code (placeholder).
     pub code: Vec<u8>,
 }
 
@@ -21,13 +23,13 @@ pub fn load(name: &'static str, code: Vec<u8>) {
     // 3. Map code and data segments
     // 4. Create a new task and add it to the scheduler
 
-    let process = Process {
-        id: 1,
-        name,
-        code,
-    };
+    let process = Process { id: 1, name, code };
 
-    println!("[Process] Process {} loaded successfully (Code Size: {} bytes).", process.name, process.code.len());
+    println!(
+        "[Process] Process {} loaded successfully (Code Size: {} bytes).",
+        process.name,
+        process.code.len()
+    );
 }
 
 /// Executes a syscall from the current userspace context.

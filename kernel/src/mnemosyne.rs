@@ -11,12 +11,14 @@ use spin::Mutex;
 struct KnowledgeGraph {
     nodes: Vec<KnowledgeNode>,
     edges: Vec<Edge>,
+    next_id: u64,
 }
 
 lazy_static! {
     static ref GRAPH: Mutex<KnowledgeGraph> = Mutex::new(KnowledgeGraph {
         nodes: Vec::new(),
         edges: Vec::new(),
+        next_id: 0,
     });
 }
 
@@ -24,7 +26,8 @@ lazy_static! {
 #[must_use]
 pub fn add_node(label: String) -> u64 {
     let mut graph = GRAPH.lock();
-    let id = graph.nodes.len() as u64;
+    let id = graph.next_id;
+    graph.next_id += 1;
     graph.nodes.push(KnowledgeNode {
         id,
         label,
@@ -37,7 +40,7 @@ pub fn add_node(label: String) -> u64 {
 /// Retrieve a node and update its significance and access time.
 pub fn touch_node(id: u64) {
     let mut graph = GRAPH.lock();
-    if let Some(node) = graph.nodes.get_mut(id as usize) {
+    if let Some(node) = graph.nodes.iter_mut().find(|n| n.id == id) {
         node.last_access += 1; // Increment simulated timestamp
         node.significance = (node.significance + 0.1).min(1.0);
     }

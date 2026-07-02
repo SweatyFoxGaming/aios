@@ -1,8 +1,7 @@
 //! Lethe: Significance-based memory pruning for Phoenix OS.
 
-use crate::println;
 use crate::mnemosyne;
-use alloc::vec::Vec;
+use crate::println;
 
 /// Pruning configuration.
 pub struct PruningPolicy {

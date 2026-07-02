@@ -17,7 +17,9 @@ pub enum Pattern {
 
 /// The Ambient UI Engine state.
 pub struct Engine {
+    /// Currently active materialization pattern.
     pub active_pattern: Pattern,
+    /// The user's current focus/attention point (x, y).
     pub focus_point: (usize, usize),
 }
 

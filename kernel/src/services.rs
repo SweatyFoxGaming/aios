@@ -10,8 +10,11 @@ use spin::Mutex;
 /// Service status for health monitoring.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ServiceStatus {
+    /// Service is operating normally.
     Active,
+    /// Service has encountered a failure.
     Failed,
+    /// Service is undergoing an automated repair sequence.
     Repairing,
 }
 
@@ -61,7 +64,11 @@ impl ServiceRegistry {
         entry.status = ServiceStatus::Active;
         entry.last_heartbeat = 0;
         self.services.push(entry);
-        crate::audit::log(token, "Register Service: ".to_string() + entry.name, "Success");
+        crate::audit::log(
+            token,
+            "Register Service: ".to_string() + entry.name,
+            "Success",
+        );
         true
     }
 

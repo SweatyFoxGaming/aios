@@ -4,13 +4,16 @@ use crate::println;
 
 /// Colors for the Ambient UI.
 pub mod colors {
-    pub const BACKGROUND_IDLE: u32 = 0x0A_0C_10; // Deep matte charcoal
-    pub const MATTE_WHITE: u32 = 0xF0_F0_F0; // Refined white
-    pub const INTENT_CYAN: u32 = 0x00_BC_D4; // Muted cyan focus point
+    /// Deep matte charcoal background color.
+    pub const BACKGROUND_IDLE: u32 = 0x0A_0C_10;
+    /// Refined matte white color for emblems and highlights.
+    pub const MATTE_WHITE: u32 = 0xF0_F0_F0;
+    /// Muted cyan color for user focus points and intent materialization.
+    pub const INTENT_CYAN: u32 = 0x00_BC_D4;
 }
 
 /// Draws a single pixel to the framebuffer.
-pub fn draw_pixel(x: usize, y: usize, color: u32) {
+pub fn draw_pixel(_x: usize, _y: usize, _color: u32) {
     // Simulated pixel plotting
 }
 
@@ -30,8 +33,10 @@ pub fn draw_vline(x: usize, y: usize, length: usize, color: u32) {
 
 /// Renders a materializing circle (The Geometric Ring).
 pub fn render_ring(x: usize, y: usize, radius: usize, color: u32) {
-    println!("[Aura] Rendering Geometric Ring at ({}, {}) with radius {} and color 0x{:x}",
-        x, y, radius, color);
+    println!(
+        "[Aura] Rendering Geometric Ring at ({}, {}) with radius {} and color 0x{:x}",
+        x, y, radius, color
+    );
 }
 
 /// Materialize a workspace based on intent.

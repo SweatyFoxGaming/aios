@@ -84,6 +84,26 @@ pub fn play_phrase(phrase: HarmonicPhrase) {
     }
 }
 
+/// Interpret a string into phonetic frequency shifts (Simulated Speech).
+pub fn play_vocal_line(text: &str) {
+    crate::println!("[Aether] Vocalizing: \"{}\"", text);
+    for c in text.chars() {
+        let freq = match c.to_ascii_lowercase() {
+            'a' | 'e' | 'i' | 'o' | 'u' => 440, // Vowels are stable
+            's' | 'f' | 'h' => 880,             // Sibilants are high
+            'b' | 'd' | 'g' => 220,             // Plosives are low
+            ' ' => 0,                           // Pause
+            _ => 330,                           // Default
+        };
+
+        if freq > 0 {
+            play_tone(freq);
+            // In a real system, we'd have a small delay here
+            stop_tone();
+        }
+    }
+}
+
 /// Play a "Success" chirp.
 pub fn beep_success() {
     play_phrase(HarmonicPhrase::TaskCompleted);

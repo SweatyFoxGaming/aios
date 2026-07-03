@@ -23,7 +23,15 @@ Instead of a monolithic AI, JARVIS coordinates a swarm of specialized agents via
     - **Memory Agent**: Hierarchical storage and retrieval.
     - **Security Agent**: Capability auditing and permission management.
 
-## 3. Memory Architecture
+## 3. Dynamic Lexicon & Learning
+
+JARVIS maintains a multi-layered vocabulary system that ensures it can understand and adapt to user intent:
+
+- **The Lexicon Registry**: A primary mapping of keywords and synonyms to system intents (e.g., "fix", "repair", "heal" all mapping to `SelfRepair`).
+- **Semantic Fallback**: If a command keyword is not found, JARVIS queries the **Mnemosyne Knowledge Graph** for existing concept nodes to infer context.
+- **The Learning Loop**: Completely unknown terms trigger a clarify-and-index sequence. JARVIS will ask for clarification via the Harmonic UI and then create a new permanent node in Mnemosyne.
+
+## 4. Memory Architecture
 
 Memory is implemented as a multi-layered system managed by the **Memory Agent**:
 
@@ -32,7 +40,7 @@ Memory is implemented as a multi-layered system managed by the **Memory Agent**:
 - **Long-Term (Semantic/Preference)**: Fact-base and user profile.
 - **Procedural (Skill Library)**: Reusable automation routines and workflows.
 
-## 4. Interaction Modes
+## 5. Interaction Modes
 
 JARVIS supports multimodal interaction:
 - **Voice**: Conversational STT/TTS.
@@ -40,7 +48,7 @@ JARVIS supports multimodal interaction:
 - **Visual**: Vision engine for UI understanding and camera data.
 - **Symbolic**: Direct API/Structured data interaction with OS services.
 
-## 5. Reasoning & Uncertainty
+## 6. Reasoning & Uncertainty
 
 JARVIS tracks **Confidence Levels** for every action. If confidence is below a threshold, the system is required to:
 1. Record the uncertainty.

@@ -52,3 +52,17 @@ pub fn speak(text: &str, prosody: Prosody) {
     // 3. Return to Idle/Normal after "speaking"
     engine::materialize(Pattern::Idle);
 }
+
+/// JARVIS Learning Loop: Process unknown concepts and integrate into Mnemosyne.
+pub fn learn_concept(concept_label: &str) {
+    speak(
+        &alloc::format!("I am unfamiliar with '{}'. Is this a system component?", concept_label),
+        Prosody::Thinking,
+    );
+
+    // Simulate adding to Mnemosyne
+    let node_id = crate::mnemosyne::add_node(alloc::string::String::from(concept_label));
+    crate::println!("[JARVIS] New concept indexed: {} (ID: {})", concept_label, node_id);
+
+    speak("Concept integrated into semantic memory.", Prosody::Calm);
+}

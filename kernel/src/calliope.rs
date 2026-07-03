@@ -53,6 +53,12 @@ pub fn speak(text: &str, prosody: Prosody) {
     engine::materialize(Pattern::Idle);
 }
 
+/// Acknowledge a wake word activation.
+pub fn acknowledge_activation() {
+    speaker::play_phrase(HarmonicPhrase::WakeActivation);
+    speak("I am listening, user.", Prosody::Calm);
+}
+
 /// JARVIS Learning Loop: Process unknown concepts and integrate into Mnemosyne.
 pub fn learn_concept(concept_label: &str) {
     speak(

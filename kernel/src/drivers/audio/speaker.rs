@@ -51,6 +51,8 @@ pub enum HarmonicPhrase {
     Thinking,
     /// A rapid, high-pitched chirp for alerts.
     Alert,
+    /// A bright, dual-tone chirp for wake word activation.
+    WakeActivation,
 }
 
 /// Plays a harmonic phrase.
@@ -79,6 +81,12 @@ pub fn play_phrase(phrase: HarmonicPhrase) {
             crate::println!("[Aether] Playing: ALERT (Rapid chirp)");
             play_tone(880);
             play_tone(987);
+            stop_tone();
+        }
+        HarmonicPhrase::WakeActivation => {
+            crate::println!("[Aether] Playing: Wake Word Activated (Bright chirp)");
+            play_tone(1046); // C6
+            play_tone(1318); // E6
             stop_tone();
         }
     }

@@ -37,13 +37,17 @@ pub fn parse(input: &str) -> Intent {
     println!("[Hermes] Parsing intent: '{}'", input);
     let normalized = input.to_lowercase();
 
+    // 0. Check for Wake Word: "Phoenix"
+    let is_activated = normalized.starts_with("phoenix");
+    let base_significance = if is_activated { 1.0 } else { 0.5 };
+
     // 1. Check the Lexicon Registry
     for entry in LEXICON {
         if normalized.contains(entry.keyword) {
             return Intent {
                 raw: String::from(input),
                 action: String::from(entry.action),
-                significance: 0.9,
+                significance: if is_activated { 1.0 } else { 0.9 },
             };
         }
     }
@@ -60,13 +64,18 @@ pub fn parse(input: &str) -> Intent {
     Intent {
         raw: String::from(input),
         action: String::from(action),
-        significance: 0.5,
+        significance: base_significance,
     }
 }
 
 /// Dispatch an intent to the appropriate system service.
 pub fn dispatch(intent: &Intent) {
     println!("[Hermes] Dispatching action: {}", intent.action);
+
+    // If the intent has maximum significance (wake word triggered), acknowledge it
+    if intent.significance >= 1.0 {
+        crate::calliope::acknowledge_activation();
+    }
 
     match intent.action.as_str() {
         "SelfRepair" => {

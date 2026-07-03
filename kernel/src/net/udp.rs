@@ -5,8 +5,11 @@ use alloc::vec::Vec;
 
 /// A simple UDP packet.
 pub struct UdpPacket {
+    /// Source port.
     pub src_port: u16,
+    /// Destination port.
     pub dst_port: u16,
+    /// Packet payload.
     pub payload: Vec<u8>,
 }
 
@@ -24,6 +27,13 @@ pub fn process_packet(data: &[u8]) {
 
 /// Send a UDP packet.
 pub fn send_udp(packet: UdpPacket, dst_ip: [u8; 4]) {
-    println!("[Aether] Sending UDP to {}.{}.{}.{}:{} ({} bytes)",
-        dst_ip[0], dst_ip[1], dst_ip[2], dst_ip[3], packet.dst_port, packet.payload.len());
+    println!(
+        "[Aether] Sending UDP to {}.{}.{}.{}:{} ({} bytes)",
+        dst_ip[0],
+        dst_ip[1],
+        dst_ip[2],
+        dst_ip[3],
+        packet.dst_port,
+        packet.payload.len()
+    );
 }

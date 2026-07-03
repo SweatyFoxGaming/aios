@@ -11,11 +11,17 @@ pub enum Pattern {
     Materialize,
     /// Alert / Warning Pulse.
     Pulse,
+    /// JARVIS Voice Activity (Melodic pulse).
+    VoiceActivity,
+    /// Idle State (Emblem).
+    Idle,
 }
 
 /// The Ambient UI Engine state.
 pub struct Engine {
+    /// Currently active materialization pattern.
     pub active_pattern: Pattern,
+    /// The user's current focus/attention point (x, y).
     pub focus_point: (usize, usize),
 }
 
@@ -36,14 +42,47 @@ pub fn materialize(pattern: Pattern) {
         ENGINE.active_pattern = pattern;
         match ENGINE.active_pattern {
             Pattern::ConcentricRings => {
-                aura::render_ring(ENGINE.focus_point.0, ENGINE.focus_point.1, 40, aura::colors::PHOENIX_GOLD);
-                aura::render_ring(ENGINE.focus_point.0, ENGINE.focus_point.1, 60, aura::colors::PHOENIX_GOLD);
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    40,
+                    aura::colors::INTENT_CYAN,
+                );
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    60,
+                    aura::colors::INTENT_CYAN,
+                );
             }
             Pattern::Materialize => {
+                aura::clear_screen();
                 aura::materialize_workspace("General Purpose");
             }
             Pattern::Pulse => {
-                aura::render_ring(ENGINE.focus_point.0, ENGINE.focus_point.1, 50, aura::colors::INTENT_CYAN);
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    50,
+                    aura::colors::INTENT_CYAN,
+                );
+            }
+            Pattern::VoiceActivity => {
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    45,
+                    aura::colors::MATTE_WHITE,
+                );
+                aura::render_ring(
+                    ENGINE.focus_point.0,
+                    ENGINE.focus_point.1,
+                    55,
+                    aura::colors::INTENT_CYAN,
+                );
+            }
+            Pattern::Idle => {
+                aura::render_emblem();
             }
         }
     }

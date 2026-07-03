@@ -30,7 +30,10 @@ pub fn verify() -> bool {
 
     if current_hash != reference_hash {
         println!("[Aegis] CRITICAL: Kernel integrity compromised!");
-        println!("[Aegis] Expected: {:x}, Found: {:x}", reference_hash, current_hash);
+        println!(
+            "[Aegis] Expected: {:x}, Found: {:x}",
+            reference_hash, current_hash
+        );
         return false;
     }
     true

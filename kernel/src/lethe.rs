@@ -1,8 +1,7 @@
 //! Lethe: Significance-based memory pruning for Phoenix OS.
 
-use crate::println;
 use crate::mnemosyne;
-use alloc::vec::Vec;
+use crate::println;
 
 /// Pruning configuration.
 pub struct PruningPolicy {
@@ -12,17 +11,26 @@ pub struct PruningPolicy {
 
 /// Run a pruning cycle based on memory pressure.
 pub fn prune(pressure_level: f32) {
-    println!("[Lethe] Memory pressure at {:.2}. Initiating pruning cycle...", pressure_level);
+    println!(
+        "[Lethe] Memory pressure at {:.2}. Initiating pruning cycle...",
+        pressure_level
+    );
 
-    // We would query Mnemosyne for nodes with low significance
-    // and either archive them to disk (PhoenixFS) or drop them.
+    let threshold = pressure_level * 0.5;
+    let policy = PruningPolicy { threshold };
 
-    let policy = PruningPolicy {
-        threshold: pressure_level * 0.5,
-    };
+    println!("[Lethe] Policy: Decay 0.1, Prune < {:.2}", policy.threshold);
 
-    println!("[Lethe] Pruning nodes with significance < {:.2}", policy.threshold);
-    println!("[Lethe] Pruning complete. Recovered simulated 128 MB.");
+    // 1. Decay all knowledge nodes
+    mnemosyne::decay_significance(0.1);
+
+    // 2. Prune nodes below threshold
+    let removed = mnemosyne::prune_nodes(policy.threshold);
+
+    println!(
+        "[Lethe] Pruning complete. Removed {} low-significance nodes.",
+        removed
+    );
 }
 
 /// Log the state of Lethe.

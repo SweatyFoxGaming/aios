@@ -32,7 +32,7 @@ pub trait FileSystem: Send + Sync {
     fn write(&mut self, path: &str, data: Vec<u8>) -> bool;
 }
 
-pub mod ramfs;
-pub mod phoenixfs;
-pub mod shell;
 pub mod elf;
+pub mod phoenixfs;
+pub mod ramfs;
+pub mod shell;

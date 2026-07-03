@@ -2,21 +2,26 @@
 
 use crate::println;
 use alloc::string::String;
-use common::security::{Token, Capability};
+use common::security::{Capability, Token};
 use common::synapse::Message;
 
 /// Syscall identifiers.
 pub mod ids {
+    /// Send a Synapse message.
     pub const SEND_MSG: u64 = 1;
+    /// Read a file from Iris VFS.
     pub const READ_FILE: u64 = 2;
+    /// Write a file to Iris VFS.
     pub const WRITE_FILE: u64 = 3;
+    /// Log an event to the audit log.
     pub const LOG: u64 = 4;
+    /// Terminate the current process.
     pub const EXIT: u64 = 5;
 }
 
 /// Handler for system calls initiated from userspace.
 #[must_use]
-pub fn handle_syscall(id: u64, arg1: u64, arg2: u64) -> u64 {
+pub fn handle_syscall(id: u64, arg1: u64, _arg2: u64) -> u64 {
     // Simulated token discovery (in a real system, retrieved from task context)
     let mut caller_token = Token::empty(101);
     // For testing, we grant some capabilities

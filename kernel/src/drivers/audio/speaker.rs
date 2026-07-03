@@ -41,8 +41,78 @@ pub fn stop_tone() {
     }
 }
 
+/// Types of harmonic phrases.
+pub enum HarmonicPhrase {
+    /// A rising scale for starting a task.
+    StartingTask,
+    /// A descending scale for completing a task.
+    TaskCompleted,
+    /// A soft, rhythmic pulse for background processing.
+    Thinking,
+    /// A rapid, high-pitched chirp for alerts.
+    Alert,
+    /// A bright, dual-tone chirp for wake word activation.
+    WakeActivation,
+}
+
+/// Plays a harmonic phrase.
+pub fn play_phrase(phrase: HarmonicPhrase) {
+    match phrase {
+        HarmonicPhrase::StartingTask => {
+            crate::println!("[Aether] Playing: Starting Task (Rising scale)");
+            play_tone(440);
+            play_tone(554);
+            play_tone(659);
+            stop_tone();
+        }
+        HarmonicPhrase::TaskCompleted => {
+            crate::println!("[Aether] Playing: Task Completed (Falling scale)");
+            play_tone(659);
+            play_tone(554);
+            play_tone(440);
+            stop_tone();
+        }
+        HarmonicPhrase::Thinking => {
+            crate::println!("[Aether] Playing: Thinking (Soft rhythmic pulse)");
+            play_tone(220);
+            stop_tone();
+        }
+        HarmonicPhrase::Alert => {
+            crate::println!("[Aether] Playing: ALERT (Rapid chirp)");
+            play_tone(880);
+            play_tone(987);
+            stop_tone();
+        }
+        HarmonicPhrase::WakeActivation => {
+            crate::println!("[Aether] Playing: Wake Word Activated (Bright chirp)");
+            play_tone(1046); // C6
+            play_tone(1318); // E6
+            stop_tone();
+        }
+    }
+}
+
+/// Interpret a string into phonetic frequency shifts (Simulated Speech).
+pub fn play_vocal_line(text: &str) {
+    crate::println!("[Aether] Vocalizing: \"{}\"", text);
+    for c in text.chars() {
+        let freq = match c.to_ascii_lowercase() {
+            'a' | 'e' | 'i' | 'o' | 'u' => 440, // Vowels are stable
+            's' | 'f' | 'h' => 880,             // Sibilants are high
+            'b' | 'd' | 'g' => 220,             // Plosives are low
+            ' ' => 0,                           // Pause
+            _ => 330,                           // Default
+        };
+
+        if freq > 0 {
+            play_tone(freq);
+            // In a real system, we'd have a small delay here
+            stop_tone();
+        }
+    }
+}
+
 /// Play a "Success" chirp.
 pub fn beep_success() {
-    play_tone(880); // A5
-                    // TODO: Implement non-blocking delay
+    play_phrase(HarmonicPhrase::TaskCompleted);
 }

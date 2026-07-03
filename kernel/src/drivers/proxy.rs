@@ -41,9 +41,7 @@ impl DriverProxy {
 
 /// Initialize Stark Isolation for a specific device.
 pub fn isolate_device(name: &str, device_type: DeviceType) {
-    println!(
-        "[Stark Isolation] Moving device {name} [{device_type:?}] to Ring 3 proxy..."
-    );
+    println!("[Stark Isolation] Moving device {name} [{device_type:?}] to Ring 3 proxy...");
 
     let proxy = DriverProxy::new(name.to_string(), 0);
     proxy.dispatch_command("INIT_ISOLATED");

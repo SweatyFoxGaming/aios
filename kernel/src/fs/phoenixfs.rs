@@ -1,11 +1,9 @@
 //! PhoenixFS: An inode-based native filesystem for Phoenix OS.
 
-use crate::println;
 use crate::drivers::storage::ramdisk;
-use alloc::vec::Vec;
+use crate::println;
 
 const MAGIC: u32 = 0x50484E58; // "PHNX"
-const INODE_COUNT: usize = 128;
 
 #[repr(C)]
 struct Superblock {
@@ -57,8 +55,13 @@ fn format() {
     let _ = ramdisk::write(0, &buffer);
 
     // Initialize Inode Table
-    let empty_inode = Inode { id: 0, size: 0, first_block: 0, node_type: 0 };
-    let mut inode_buffer = [0u8; 512];
+    let _empty_inode = Inode {
+        id: 0,
+        size: 0,
+        first_block: 0,
+        node_type: 0,
+    };
+    let inode_buffer = [0u8; 512];
     // This is a simplified formatting of the inode table
     let _ = ramdisk::write(1, &inode_buffer);
 
@@ -67,5 +70,8 @@ fn format() {
 
 /// Create a new file (Simulated).
 pub fn create_file(id: u32, size: u32) {
-    println!("[Iris] PhoenixFS: Creating file (ID: {}, Size: {} bytes)", id, size);
+    println!(
+        "[Iris] PhoenixFS: Creating file (ID: {}, Size: {} bytes)",
+        id, size
+    );
 }

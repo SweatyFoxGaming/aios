@@ -29,6 +29,9 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) {
 }
 
 /// Acknowledge an interrupt.
-pub fn end_of_interrupt() {
+///
+/// # Safety
+/// This function is unsafe because it interacts with memory-mapped I/O.
+pub unsafe fn end_of_interrupt() {
     // In a real implementation, we would write 0 to the EOI register (offset 0xB0)
 }

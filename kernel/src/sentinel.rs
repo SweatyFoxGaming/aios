@@ -12,7 +12,11 @@ pub fn lockdown(trigger_token: &Token, reason: &str) {
     println!("[Sentinel] Reason: {}", reason);
 
     // Log to immutable ledger
-    crate::audit::log(trigger_token, "SECURITY LOCKDOWN: ".to_string() + reason, "Neutralized");
+    crate::audit::log(
+        trigger_token,
+        "SECURITY LOCKDOWN: ".to_string() + reason,
+        "Neutralized",
+    );
 
     // Switch OS to restricted state
     crate::ego::set_state(crate::ego::PresenceState::Maintenance);

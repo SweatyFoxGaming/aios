@@ -1,7 +1,7 @@
 //! Process scheduler for Phoenix OS.
 
-pub mod task;
 pub mod process;
+pub mod task;
 
 use crate::sched::task::Task;
 use lazy_static::lazy_static;

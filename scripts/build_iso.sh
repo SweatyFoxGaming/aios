@@ -45,7 +45,25 @@ menuentry "Phoenix OS" {
 EOF
 
 if command -v grub-mkrescue >/dev/null 2>&1; then
-    grub-mkrescue -o "$ISO_NAME" "$IMAGE_DIR"
+    # On the actual test machine, the video-mode warning is a hard freeze,
+    # not just a warning like under QEMU/OVMF -- meaning the real
+    # firmware's EFI GOP query itself hangs rather than failing cleanly.
+    # `terminal_output console` in grub.cfg above can't prevent this: it
+    # only takes effect once grub.cfg is sourced, but GRUB's "normal"
+    # module tries to establish a terminal (defaulting to gfxterm/video if
+    # those modules are present at all) as it enters interactive/menu mode,
+    # which happens as grub.cfg's menuentry is processed -- before
+    # `terminal_output console` has a chance to matter if the gfxterm
+    # probe itself is what's hanging.
+    #
+    # Explicit --install-modules excludes every video/gfxterm/GOP module
+    # from the image entirely, so GRUB has nothing to probe with in the
+    # first place and must use plain console output unconditionally. This
+    # is a fixed minimal set (menu/multiboot2/partition/filesystem/search
+    # essentials only) rather than the default "all", which normally
+    # includes every video module GRUB ships.
+    MODULES="normal multiboot2 multiboot part_gpt part_msdos part_apple iso9660 fat search search_fs_uuid search_fs_file search_label configfile echo ls reboot halt boot terminal"
+    grub-mkrescue --install-modules="$MODULES" -o "$ISO_NAME" "$IMAGE_DIR"
     echo "ISO created: $ISO_NAME"
 else
     echo "WARNING: grub-mkrescue not found. ISO cannot be created."

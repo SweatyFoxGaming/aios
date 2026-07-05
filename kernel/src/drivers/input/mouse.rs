@@ -1,6 +1,8 @@
 //! PS/2 Mouse driver for Phoenix OS.
 
 use crate::println;
+use lazy_static::lazy_static;
+use spin::Mutex;
 use x86_64::instructions::port::Port;
 
 static mut MOUSE_DATA: [u8; 3] = [0; 3];
@@ -14,6 +16,21 @@ pub struct MouseState {
     pub right: bool,
     pub middle: bool,
 }
+
+lazy_static! {
+    static ref MOUSE_STATE: Mutex<MouseState> = Mutex::new(MouseState {
+        x: 400,
+        y: 300,
+        left: false,
+        right: false,
+        middle: false,
+    });
+}
+
+/// Set once per interrupt when the left button transitions from released
+/// to pressed (a "click", not "held") -- `take_click` consumes it exactly
+/// once so a single physical click doesn't fire twice.
+static PENDING_CLICK: Mutex<Option<(i32, i32)>> = Mutex::new(None);
 
 /// Max poll attempts before giving up on a PS/2 controller status bit. This
 /// environment's QEMU PS/2 controller emulation was observed to never clear
@@ -95,25 +112,61 @@ pub fn handle_interrupt() {
                     MOUSE_DATA[2] = data;
                     MOUSE_CYCLE = 0;
 
-                    let _left = (MOUSE_DATA[0] & 0x01) != 0;
-                    let _right = (MOUSE_DATA[0] & 0x02) != 0;
-                    let _middle = (MOUSE_DATA[0] & 0x04) != 0;
+                    let left = (MOUSE_DATA[0] & 0x01) != 0;
+                    let right = (MOUSE_DATA[0] & 0x02) != 0;
+                    let middle = (MOUSE_DATA[0] & 0x04) != 0;
 
-                    let mut x = MOUSE_DATA[1] as i32;
-                    let mut y = MOUSE_DATA[2] as i32;
+                    let mut dx = MOUSE_DATA[1] as i32;
+                    let mut dy = MOUSE_DATA[2] as i32;
 
                     if (MOUSE_DATA[0] & 0x10) != 0 {
-                        x -= 256;
+                        dx -= 256;
                     }
                     if (MOUSE_DATA[0] & 0x20) != 0 {
-                        y -= 256;
+                        dy -= 256;
                     }
 
-                    // Here we would dispatch a mouse event
-                    // println!("Mouse Move: dx={}, dy={}", x, y);
+                    let mut state = MOUSE_STATE.lock();
+                    let was_left = state.left;
+                    // PS/2 reports +y as "up" (screen coordinates increase
+                    // downward), so dy is subtracted rather than added.
+                    state.x = (state.x + dx).clamp(0, 1023);
+                    state.y = (state.y - dy).clamp(0, 767);
+                    state.left = left;
+                    state.right = right;
+                    state.middle = middle;
+                    let moved = dx != 0 || dy != 0;
+                    let (cx, cy) = (state.x, state.y);
+                    drop(state);
+
+                    if left && !was_left {
+                        *PENDING_CLICK.lock() = Some((cx, cy));
+                    }
+                    if moved || left != was_left {
+                        crate::drivers::display::ambient_ui::on_mouse_activity();
+                    }
                 }
                 _ => MOUSE_CYCLE = 0,
             }
         }
     }
+}
+
+/// Current tracked cursor position and button state.
+#[must_use]
+pub fn get_state() -> MouseState {
+    let state = MOUSE_STATE.lock();
+    MouseState {
+        x: state.x,
+        y: state.y,
+        left: state.left,
+        right: state.right,
+        middle: state.middle,
+    }
+}
+
+/// Consume the pending click (if any) -- returns `Some((x, y))` at most
+/// once per rising edge of the left button.
+pub fn take_click() -> Option<(i32, i32)> {
+    PENDING_CLICK.lock().take()
 }

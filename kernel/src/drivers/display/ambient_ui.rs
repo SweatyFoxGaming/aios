@@ -166,9 +166,32 @@ pub fn submit_command() {
     }
 }
 
-/// Temporary stub -- Task 8 replaces this with real Hermes dispatch and
-/// chat scrollback rendering.
-pub fn submit_chat_message() {}
+static CHAT_SCROLLBACK: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Submit the Chat panel's current input to the existing Hermes intent
+/// pipeline and record both the message and Phoenix's canned reply (keyed
+/// off the classified intent action) in the scrollback. No real AI/LLM
+/// response generation -- explicitly out of scope for v1 (see the design
+/// doc's Non-goals).
+pub fn submit_chat_message() {
+    let message = crate::drivers::input::keyboard::take_chat_input();
+    if message.is_empty() {
+        return;
+    }
+    push_scrollback(&CHAT_SCROLLBACK, crate::safe_alloc::concat2("You: ", &message));
+
+    let intent = crate::hermes::parse(&message);
+    crate::hermes::dispatch(&intent);
+
+    let reply = if crate::safe_alloc::str_eq(&intent.action, "KnowledgeQuery") {
+        "Researching that for you..."
+    } else if crate::safe_alloc::str_eq(&intent.action, "SelfRepair") {
+        "Running diagnostics..."
+    } else {
+        "Understood."
+    };
+    push_scrollback(&CHAT_SCROLLBACK, crate::safe_alloc::concat2("Phoenix: ", reply));
+}
 
 /// Deep matte charcoal idle background, per
 /// `docs/AMBIENT_UI_SPECIFICATION.md` section 2.
@@ -210,6 +233,22 @@ fn render_idle(display: &mut crate::drivers::display::AuraDisplay) {
 
 fn render_active(display: &mut crate::drivers::display::AuraDisplay) {
     render_command_panel(display);
+    render_chat_panel(display);
+}
+
+fn render_chat_panel(display: &mut crate::drivers::display::AuraDisplay) {
+    let border_color = if current_focus() == Focus::Chat { Color::CYAN } else { Color::WHITE };
+    display.draw_rect(0, 384, 700, 2, border_color);
+    display.draw_rect(0, 384, 2, 384, border_color);
+    display.draw_rect(698, 384, 2, 384, border_color);
+    display.draw_rect(0, 766, 700, 2, border_color);
+
+    let lines = CHAT_SCROLLBACK.lock();
+    let mut y = 394;
+    for line in lines.iter() {
+        crate::drivers::display::font::draw_text(display, 10, y, line, Color::WHITE);
+        y += crate::drivers::display::font::LINE_HEIGHT;
+    }
 }
 
 fn render_command_panel(display: &mut crate::drivers::display::AuraDisplay) {

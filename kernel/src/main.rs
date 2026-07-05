@@ -243,8 +243,6 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     let _ = aegis::verify();
 
     sched::process::load("Shell", alloc::vec![0x90, 0x90, 0x90]);
-    // drivers::display::aura::render_emblem(); // removed with aura.rs; ambient_ui::init() (Task 6) replaces this
-    fs::shell::start();
 
     let mock_user_token = Token::empty(100);
     let _ = services::find("RestrictedDebugService", &mock_user_token);

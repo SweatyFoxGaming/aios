@@ -38,6 +38,13 @@ pub fn add_relation(from: u64, to: u64, relation: Relation) {
     graph.edges.push(Edge { from, to, relation });
 }
 
+/// Number of nodes currently in the knowledge graph, for the Ambient
+/// UI's status panel.
+#[must_use]
+pub fn node_count() -> usize {
+    GRAPH.lock().nodes.len()
+}
+
 /// Print the current knowledge graph.
 pub fn debug_graph() {
     let graph = GRAPH.lock();

@@ -234,6 +234,7 @@ fn render_idle(display: &mut crate::drivers::display::AuraDisplay) {
 fn render_active(display: &mut crate::drivers::display::AuraDisplay) {
     render_command_panel(display);
     render_chat_panel(display);
+    render_status_panel(display);
 }
 
 fn render_chat_panel(display: &mut crate::drivers::display::AuraDisplay) {
@@ -247,6 +248,23 @@ fn render_chat_panel(display: &mut crate::drivers::display::AuraDisplay) {
     let mut y = 394;
     for line in lines.iter() {
         crate::drivers::display::font::draw_text(display, 10, y, line, Color::WHITE);
+        y += crate::drivers::display::font::LINE_HEIGHT;
+    }
+}
+
+fn render_status_panel(display: &mut crate::drivers::display::AuraDisplay) {
+    display.draw_rect(700, 0, 2, 768, Color::WHITE);
+
+    let ego_state = crate::safe_format!("Presence: {:?}", crate::ego::get_state());
+    let pressure = crate::pulse::get_pressure();
+    let memory_line = crate::safe_format!("Memory pressure: {}", pressure.memory);
+    let vesta_line = crate::safe_format!("Consistency: {}", crate::vesta::get_consistency_score());
+    let nodes_line = crate::safe_format!("Knowledge nodes: {}", crate::mnemosyne::node_count());
+
+    let lines = [&ego_state, &memory_line, &vesta_line, &nodes_line];
+    let mut y = 10;
+    for line in lines {
+        crate::drivers::display::font::draw_text(display, 710, y, line, Color::WHITE);
         y += crate::drivers::display::font::LINE_HEIGHT;
     }
 }

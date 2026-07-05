@@ -2,6 +2,7 @@
 //! Monitors RAM pressure and CPU load to keep the system responsive on low-end hardware.
 
 use crate::println;
+use spin::Mutex;
 
 /// Current resource pressure levels.
 pub struct Pressure {
@@ -11,6 +12,8 @@ pub struct Pressure {
     pub cpu: f32,
 }
 
+static LAST_PRESSURE: Mutex<Pressure> = Mutex::new(Pressure { memory: 0.0, cpu: 0.0 });
+
 /// Check current system pressure and emit events if thresholds are exceeded.
 pub fn monitor() {
     // Placeholder: In a real system, we'd query the Frame Allocator and Scheduler
@@ -18,6 +21,7 @@ pub fn monitor() {
         memory: 0.2, // Simulated low pressure
         cpu: 0.1,
     };
+    *LAST_PRESSURE.lock() = Pressure { memory: pressure.memory, cpu: pressure.cpu };
 
     if pressure.memory > 0.8 {
         crate::events::publish("Pulse: CRITICAL Memory Pressure", 0.9f32.to_bits());
@@ -37,4 +41,11 @@ pub fn log_status() {
     println!("Monitoring: Active");
     println!("Thresholds: Memory > 0.8 (Critical), Memory > 0.5 (Warning)");
     println!("------------------------------");
+}
+
+/// Last-computed system pressure, for the Ambient UI's status panel.
+#[must_use]
+pub fn get_pressure() -> Pressure {
+    let p = LAST_PRESSURE.lock();
+    Pressure { memory: p.memory, cpu: p.cpu }
 }

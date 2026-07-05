@@ -25,10 +25,10 @@ pub fn monitor() {
         // Trigger self-optimization (Dreaming state)
         crate::ego::set_state(crate::ego::PresenceState::Dreaming);
         // Invoke Lethe to prune memory
-        crate::lethe::prune();
+        crate::lethe::prune(pressure.memory);
     } else if pressure.memory > 0.5 {
         crate::events::publish("Pulse: Moderate Memory Pressure".to_string(), 0.6);
-        crate::lethe::prune();
+        crate::lethe::prune(pressure.memory);
     }
 }
 

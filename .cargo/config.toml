@@ -4,4 +4,10 @@ target = "x86_64-unknown-none"
 [target.'cfg(all(target_arch = "x86_64", target_os = "none"))']
 rustflags = [
     "-C", "link-arg=-Tkernel/linker.ld",
+    # Without this, rustc emits a PIE (ET_DYN) binary with a DYNAMIC segment
+    # and .rela.dyn/GOT relocations that need a runtime dynamic linker to
+    # resolve -- nothing exists to do that in a bare-metal kernel, so Limine
+    # loads the segments as-is with unresolved relocations and jumps into
+    # garbage. Force a static, non-relocatable kernel binary instead.
+    "-C", "relocation-model=static",
 ]

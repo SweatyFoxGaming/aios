@@ -98,7 +98,16 @@ extern "x86-interrupt" fn page_fault_handler(
     println!("EXCEPTION: PAGE FAULT");
     println!("Accessed Address: {:?}", Cr2::read());
     println!("Error Code: {:?}", error_code);
-    println!("{stack_frame:#?}");
+    // Printing the whole InterruptStackFrame via {:#?} causes a cascading
+    // re-fault (repeated invocations of this handler with a shrinking stack
+    // pointer and an instruction_pointer that doesn't correspond to any code
+    // in this binary) -- root cause not yet found, deferred along with the
+    // fingerprint::gather() investigation (see main.rs). Print individual
+    // fields instead; this avoids the hang and still gives the one value
+    // that actually matters for diagnosis (where the fault happened).
+    println!("instruction_pointer: {:?}", stack_frame.instruction_pointer);
+    println!("code_segment: {:?}", stack_frame.code_segment);
+    println!("stack_pointer: {:?}", stack_frame.stack_pointer);
 
     reflective_audit("Page Fault", "Instruction/Data access error");
 

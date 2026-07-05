@@ -18,8 +18,14 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) {
     base |= 1 << 11; // Enable bit
     apic_base_msr.write(base);
 
-    // Map LAPIC base address in virtual memory
-    let lapic_virt = physical_memory_offset + LAPIC_BASE;
+    // Map LAPIC base address in virtual memory. This is a placeholder
+    // computation only (see TODO below) -- LAPIC_BASE (~4GiB) isn't actually
+    // covered by the kernel's current identity/higher-half mapping (0..2GiB),
+    // so this address isn't yet usable for a real MMIO access; a plain '+'
+    // here overflows u64 since physical_memory_offset is only 2GiB below the
+    // top of address space. wrapping_add keeps this a non-crashing
+    // placeholder until real MMIO mapping is implemented.
+    let lapic_virt = VirtAddr::new(physical_memory_offset.as_u64().wrapping_add(LAPIC_BASE));
     crate::println!(
         "[APIC] Local APIC enabled at virtual address: {:?}",
         lapic_virt

@@ -3,8 +3,23 @@
 pub mod aura;
 pub mod engine;
 pub mod transcendent;
-use limine::Framebuffer;
 use spin::Mutex;
+
+/// Framebuffer geometry/location, decoupled from any specific boot protocol
+/// (previously tied directly to `limine::Framebuffer`) so display code
+/// doesn't care whether the info came from Limine, Multiboot2, or anything
+/// else that can hand us a linear framebuffer address.
+#[derive(Debug, Clone, Copy)]
+pub struct Framebuffer {
+    /// Physical/mapped address of the linear framebuffer.
+    pub address: u64,
+    /// Bytes per scanline.
+    pub pitch: u64,
+    /// Width in pixels.
+    pub width: u64,
+    /// Height in pixels.
+    pub height: u64,
+}
 
 /// A simple RGBA color.
 #[derive(Debug, Clone, Copy)]
@@ -51,14 +66,14 @@ impl Color {
 
 /// Handle for the Aura display system.
 pub struct AuraDisplay {
-    framebuffer: &'static Framebuffer,
+    framebuffer: Framebuffer,
     overlay_active: bool,
 }
 
 impl AuraDisplay {
     /// Create a new Aura display instance.
     #[must_use]
-    pub const fn new(fb: &'static Framebuffer) -> Self {
+    pub const fn new(fb: Framebuffer) -> Self {
         Self {
             framebuffer: fb,
             overlay_active: false,
@@ -70,7 +85,7 @@ impl AuraDisplay {
     /// # Panics
     /// Panics if the framebuffer address is invalid or if target size overflows.
     pub fn clear(&self, color: Color) {
-        let ptr = self.framebuffer.address.as_ptr().unwrap();
+        let ptr = self.framebuffer.address as *mut u8;
         let size = (self.framebuffer.pitch * self.framebuffer.height) / 4;
         let raw_color = color.pack();
 
@@ -89,7 +104,7 @@ impl AuraDisplay {
     /// # Panics
     /// Panics if the framebuffer address is invalid or if coordinate calculations overflow.
     pub fn draw_rect(&self, x: u64, y: u64, width: u64, height: u64, color: Color) {
-        let ptr = self.framebuffer.address.as_ptr().unwrap();
+        let ptr = self.framebuffer.address as *mut u8;
         let pitch = self.framebuffer.pitch / 4;
         let raw_color = color.pack();
 
@@ -124,7 +139,7 @@ impl AuraDisplay {
 pub static DISPLAY: Mutex<Option<AuraDisplay>> = Mutex::new(None);
 
 /// Initialize the Aura display.
-pub fn init(fb: &'static Framebuffer) {
+pub fn init(fb: Framebuffer) {
     let aura = AuraDisplay::new(fb);
     aura.clear(Color::BLACK);
 

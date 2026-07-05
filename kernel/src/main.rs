@@ -71,28 +71,28 @@ use alloc::string::ToString;
 use common::addr::PhysAddr;
 use common::security::{Capability, Token};
 use common::synapse::Message;
-use limine::{FramebufferRequest, HhdmRequest, MemmapRequest};
+use multiboot2::BootInformation;
 use x86_64::VirtAddr;
 
-// Limine requests
-#[used]
-#[link_section = ".limine_reqs"]
-static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new(0);
+/// Virtual offset at which the 32-bit bootstrap (`boot32.asm`) identity-maps
+/// all physical memory a second time (in addition to the identity mapping at
+/// offset 0), giving us an HHDM-style "physical memory offset" the way
+/// Limine used to hand us directly -- except this time we built it
+/// ourselves, so the constant has to match `KERNEL_VMA_OFFSET` in both
+/// `boot32.asm` and `linker.ld` exactly.
+const PHYS_MEM_OFFSET: u64 = 0xffff_ffff_8000_0000;
 
-#[used]
-#[link_section = ".limine_reqs"]
-static MEMORY_MAP_REQUEST: MemmapRequest = MemmapRequest::new(0);
-
-#[used]
-#[link_section = ".limine_reqs"]
-static HHDM_REQUEST: HhdmRequest = HhdmRequest::new(0);
-
-/// Kernel entry point.
+/// Kernel entry point, called from `boot32.asm`'s `long_mode_start` once
+/// paging and long mode are active. `multiboot_info_addr` is the physical
+/// (identity-mapped, so also valid as a direct pointer) address of the
+/// Multiboot2 boot information structure GRUB left for us, passed through
+/// from EBX by the assembly bootstrap.
 ///
 /// # Panics
-/// Panics if the HHDM request fails or memory management initialization fails.
+/// Panics if the Multiboot2 info is invalid, no memory map tag is present,
+/// or memory management initialization fails.
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     use alloc::boxed::Box;
 
     println!("Phoenix OS Kernel booting...");
@@ -101,21 +101,30 @@ pub extern "C" fn _start() -> ! {
     arch::init();
     println!("Architecture initialized (GDT, IDT, PIT).");
 
-    // 2. Discover physical memory layout and HHDM
-    let phys_mem_offset = HHDM_REQUEST.get_response().get().map_or_else(
-        || {
-            panic!("HHDM request failed");
-        },
-        |hhdm_response| VirtAddr::new(hhdm_response.offset),
-    );
+    // 2. Parse the Multiboot2 boot information GRUB handed us, and pull the
+    // memory map out of it (Multiboot2 has no HHDM concept the way Limine
+    // did -- PHYS_MEM_OFFSET above is our own convention, built into the
+    // page tables in boot32.asm, not something the bootloader gives us).
+    let boot_info = unsafe {
+        BootInformation::load(multiboot_info_addr as *const multiboot2::BootInformationHeader)
+            .expect("Invalid Multiboot2 boot information")
+    };
+    let phys_mem_offset = VirtAddr::new(PHYS_MEM_OFFSET);
 
-    let mmap_response = MEMORY_MAP_REQUEST
-        .get_response()
-        .get()
-        .expect("Memory map request failed");
+    // SAFETY: the Multiboot2 info structure lives in GRUB-provided physical
+    // memory that nothing else claims or overwrites during the kernel's
+    // lifetime (same assumption the original Limine `'static` responses
+    // relied on) -- extending the borrow to 'static is sound here.
+    let mmap_tag: &'static multiboot2::MemoryMapTag = unsafe {
+        core::mem::transmute(
+            boot_info
+                .memory_map_tag()
+                .expect("Multiboot2 memory map tag missing"),
+        )
+    };
 
     // 3. Initialize memory management (Physical Frame Allocator, Virtual Paging, and Heap)
-    let mut frame_allocator = unsafe { mem::frame::BootFrameAllocator::init(mmap_response) };
+    let mut frame_allocator = unsafe { mem::frame::BootFrameAllocator::init(mmap_tag) };
     let mut mapper = unsafe { mem::paging::init(phys_mem_offset) };
     mem::heap::init_heap(&mut mapper, &mut frame_allocator).expect("Heap initialization failed");
 
@@ -126,17 +135,31 @@ pub extern "C" fn _start() -> ! {
         arch::x86_64::apic::init(phys_mem_offset);
     }
 
-    // 4. Gather hardware identity - requires heap for String
+    // Verify heap works
+    let heap_value = Box::new(42);
+    println!("Heap allocation verification: Boxed value = {}", heap_value);
+    let initial_addr = PhysAddr(0x1000);
+    println!("Initial address verified: {:?}", initial_addr);
+
+    println!("Phoenix OS boot milestone reached: arch + memory management fully initialized.");
+
+    // Everything below here is one-shot demo/exercise code touching modules
+    // that have never actually been run before (this whole repo was
+    // generated in a single pass and never booted prior to this session --
+    // see git log). `fingerprint::gather()` triggers a page fault whose
+    // repeated-fault instruction pointer doesn't correspond to any code in
+    // this binary at all (not even the low-memory bootstrap), suggesting
+    // stack/interrupt-frame corruption during nested fault handling rather
+    // than a simple logic bug -- a materially harder class of problem than
+    // the fixes above (missing arg, PIE relocation model, EFER.NXE). Disabled
+    // here so the kernel reaches its idle loop cleanly; re-enable and debug
+    // these one module at a time as a separate, isolated follow-up.
+    /*
     let hardware_fp = arch::x86_64::fingerprint::gather();
-
-    // 5. Silicon Morphing - optimize hot paths
     arch::x86_64::morph::morph(&hardware_fp);
-
-    // 6. Security & Integrity (Aegis & Vault)
     aegis::init();
     let _ = vault::init();
 
-    // 7. Setup Security Tokens - requires heap if using Vec or complex types
     let mut kernel_token = Token::empty(0);
     kernel_token.grant(Capability::ServiceRegister);
     kernel_token.grant(Capability::MemAlloc);
@@ -145,7 +168,6 @@ pub extern "C" fn _start() -> ! {
     kernel_token.grant(Capability::AuditWrite);
     kernel_token.grant(Capability::HardwareInfo);
 
-    // 8. Register foundational services - requires heap for ServiceRegistry (Vec)
     let _ = services::register("KernelCore", 1, &kernel_token);
     let _ = services::register("LogService", 1, &kernel_token);
     let _ = services::register_secure("MemoryService", 1, Capability::MemAlloc, &kernel_token);
@@ -165,32 +187,30 @@ pub extern "C" fn _start() -> ! {
     let _ = services::register("LetheService", 1, &kernel_token);
     let _ = services::register("AegisService", 1, &kernel_token);
     let _ = services::register("VaultService", 1, &kernel_token);
-
-    // Register Honey-Intents
     let _ = services::register_decoy("RestrictedDebugService", &kernel_token);
     let _ = services::register_decoy("GlobalMemoryWrite", &kernel_token);
 
-    // 9. Initialize scheduler
     sched::init();
     println!("Scheduler initialized.");
 
-    // Check for framebuffer and initialize Aura
-    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response().get() {
-        if let Some(framebuffer) = framebuffer_response.framebuffers().first() {
-            println!(
-                "Framebuffer found: {}x{}. Initializing Aura...",
-                framebuffer.width, framebuffer.height
-            );
-            drivers::display::init(framebuffer);
-            drivers::display::engine::init();
-            drivers::display::transcendent::init();
-        }
+    if let Some(Ok(fb_tag)) = boot_info.framebuffer_tag() {
+        let framebuffer = drivers::display::Framebuffer {
+            address: fb_tag.address(),
+            pitch: u64::from(fb_tag.pitch()),
+            width: u64::from(fb_tag.width()),
+            height: u64::from(fb_tag.height()),
+        };
+        println!(
+            "Framebuffer found: {}x{}. Initializing Aura...",
+            framebuffer.width, framebuffer.height
+        );
+        drivers::display::init(framebuffer);
+        drivers::display::engine::init();
+        drivers::display::transcendent::init();
     }
 
-    // Initialize sensory hardware discovery (PCI)
     arch::x86_64::pci::scan_bus();
 
-    // Initialize Mouse and Storage
     drivers::input::mouse::init();
     drivers::storage::ramdisk::init();
     fs::phoenixfs::init();
@@ -199,49 +219,37 @@ pub extern "C" fn _start() -> ! {
     updater::check();
     calliope::init();
 
-    // Set final ego state
     ego::set_state(ego::PresenceState::Idle);
 
-    // Initialize Cognitive Core flow
     let node_id = mnemosyne::add_node("Phoenix Project".to_string());
     let sub_id = mnemosyne::add_node("Kernel Implementation".to_string());
     mnemosyne::add_relation(sub_id, node_id, common::memory::Relation::PartOf);
 
-    // Simulate Hermes Intent Parsing
     let raw_input = "research solid state batteries";
     let intent = hermes::parse(raw_input);
     hermes::dispatch(&intent);
 
-    // Start resource monitoring
     pulse::monitor();
     vesta::check_health();
 
-    // Publish high-significance boot event
     events::publish("Kernel Boot Sequence Complete".to_string(), 0.9);
 
-    // Test Synapse IPC
     synapse::send(Message::new(
         "KernelCore",
         "AuditLog",
         "Initial Synapse Probe".to_string(),
     ));
 
-    // Test Syscall Interface (Oracle)
     let _ = syscall::handle_syscall(1, 0, 0);
-
-    // Verify Integrity
     let _ = aegis::verify();
 
-    // Load a mock userspace process
     sched::process::load("Shell", alloc::vec![0x90, 0x90, 0x90]);
     drivers::display::aura::render_emblem();
     fs::shell::start();
 
-    // Test Honey-Intent detection
     let mock_user_token = Token::empty(100);
     let _ = services::find("RestrictedDebugService", &mock_user_token);
 
-    // Final initialization logs
     arch::x86_64::fingerprint::log_info(&hardware_fp);
     services::list_services();
     audit::print_logs();
@@ -253,13 +261,7 @@ pub extern "C" fn _start() -> ! {
     vesta::log_status();
     mnemosyne::debug_graph();
     lethe::log_status();
-
-    let initial_addr = PhysAddr(0x1000);
-    println!("Initial address verified: {:?}", initial_addr);
-
-    // Verify heap works
-    let heap_value = Box::new(42);
-    println!("Heap allocation verification: Boxed value = {}", heap_value);
+    */
 
     #[cfg(test)]
     test_main();

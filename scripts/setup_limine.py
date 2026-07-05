@@ -48,8 +48,13 @@ def download_limine():
     # I will attempt to download from the binary branch instead if possible.
 
 def download_limine_binaries():
-    # Use the 'v8.x-binary' branch which contains prebuilt binaries
-    BRANCH = "v8.x-binary"
+    # Use the 'v5.x-binary' branch which contains prebuilt binaries.
+    # NOTE: the `limine` Rust crate pinned in kernel/Cargo.toml (0.1.12) implements
+    # an older boot-protocol revision (~Limine 4.x-6.x API shape: `FramebufferRequest::new(0)`
+    # + `.get_response().get()`), NOT the v8.x protocol/API. Pairing kernel code against
+    # v8.x binaries caused Limine to hang silently after the BIOS boot stage (no menu, no
+    # serial output, no kernel handoff) — protocol mismatch, not a kernel bug.
+    BRANCH = "v5.x-branch-binary"
     FILES = [
         "limine-bios.sys",
         "limine-bios-cd.bin",

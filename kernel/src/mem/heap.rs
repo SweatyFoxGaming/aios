@@ -41,6 +41,9 @@ pub fn init_heap(
             .ok_or(MapToError::FrameAllocationFailed)?;
 
         // Security: Set NO_EXECUTE to prevent code execution from the heap.
+        // NOTE: requires EFER.NXE to be set (see boot32.asm's enable_paging) --
+        // without it this bit is reserved in the PTE and setting it is a
+        // hardware-level "malformed page table" fault, not a real mapping bug.
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE;
 
         unsafe {

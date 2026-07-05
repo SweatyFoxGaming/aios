@@ -14,6 +14,10 @@ lazy_static! {
 }
 
 /// Internal print function.
+///
+/// Writes to both the serial port (visible in QEMU/with a null-modem
+/// cable) and the VGA text-mode console at `0xB8000` (visible on a real
+/// monitor with no serial hardware at all) -- see `vga.rs` for why.
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
@@ -21,6 +25,7 @@ pub fn _print(args: fmt::Arguments) {
         .lock()
         .write_fmt(args)
         .expect("Printing to serial failed");
+    crate::vga::_print(args);
 }
 
 /// Prints to the host through the serial interface.

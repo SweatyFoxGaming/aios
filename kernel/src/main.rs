@@ -66,6 +66,8 @@ mod test_runner;
 pub mod updater;
 /// Hardware-rooted trust.
 pub mod vault;
+/// Legacy VGA text-mode console (visible on real hardware with no serial cable).
+pub mod vga;
 /// AI homeostasis.
 pub mod vesta;
 

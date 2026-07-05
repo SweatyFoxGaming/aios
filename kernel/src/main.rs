@@ -205,6 +205,7 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
             framebuffer.width, framebuffer.height
         );
         drivers::display::init(framebuffer);
+        drivers::display::ambient_ui::init();
     }
 
     arch::x86_64::pci::scan_bus();
@@ -263,8 +264,9 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     #[cfg(test)]
     test_main();
 
-    #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        drivers::display::ambient_ui::render();
+    }
 }
 
 #[cfg(test)]

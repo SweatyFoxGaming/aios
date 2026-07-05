@@ -1031,6 +1031,8 @@ Expected: the QEMU window shows a charcoal background with a cyan filled circle 
 grep -iE "exception|panic" /tmp/boot.log || echo "CLEAN"
 ```
 
+**Encountered when actually executing this task:** a `screendump` taken via the QEMU monitor sometimes captured a fully blank (background-only) frame with no circle visible at all, on two separate attempts. This is not a rendering bug -- `fill_circle` was verified correct with a side-by-side diagnostic (a `draw_rect` square plus a `fill_circle`, both rendered correctly together). It's an artifact of this task's uncontrolled busy-loop redraw (`clear()` then redraw, as fast as possible, no vsync/double-buffering, explicitly deferred as "polish" per the design doc's Non-goals): `clear()` alone writes ~3MB (1024x768x32bpp) before the circle is drawn, so a screendump has a real chance of landing in that window. Not a blocker for this plan's scope; a future polish pass should double-buffer instead of clearing the live framebuffer directly.
+
 - [ ] **Step 4: Commit**
 
 ```bash

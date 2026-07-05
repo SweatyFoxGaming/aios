@@ -2,6 +2,7 @@
 //! (`docs/AMBIENT_UI_SPECIFICATION.md`) and the three functional panels
 //! that materialize in the active state.
 
+use crate::drivers::display::{Color, DISPLAY};
 use alloc::string::String;
 use spin::Mutex;
 
@@ -136,3 +137,45 @@ pub fn submit_command() {}
 /// Temporary stub -- Task 8 replaces this with real Hermes dispatch and
 /// chat scrollback rendering.
 pub fn submit_chat_message() {}
+
+/// Deep matte charcoal idle background, per
+/// `docs/AMBIENT_UI_SPECIFICATION.md` section 2.
+const IDLE_BACKGROUND: Color = Color { r: 10, g: 12, b: 16, a: 255 };
+
+/// Initialize the Ambient UI -- called once from `main.rs` after the
+/// framebuffer is set up.
+pub fn init() {
+    render();
+}
+
+/// Redraw the current state. Called in a loop from `main.rs`'s idle
+/// spin -- v1 has no animation, so this simply redraws everything fresh
+/// each call, which is cheap enough at 1024x768 for a polling loop.
+///
+/// Takes `&mut AuraDisplay` (not `&AuraDisplay`) even though `render_idle`
+/// only needs `fill_circle`'s `&self`: Task 7 onward adds
+/// `font::draw_text` calls to `render_active`, and `embedded-graphics`'s
+/// `Drawable::draw` requires `&mut D: DrawTarget`.
+pub fn render() {
+    let mut guard = DISPLAY.lock();
+    let Some(ref mut display) = *guard else {
+        return;
+    };
+    display.clear(IDLE_BACKGROUND);
+    match current_state() {
+        UiState::Idle => render_idle(display),
+        UiState::Active => render_active(display),
+    }
+}
+
+fn render_idle(display: &mut crate::drivers::display::AuraDisplay) {
+    // Centered geometric ring emblem -- matches the "Geometric Ring"
+    // naming already used in the deleted aura.rs placeholder, now
+    // actually drawn instead of just logged. `fill_circle` takes `&self`,
+    // which auto-reborrows fine through the `&mut` reference.
+    display.fill_circle(512, 384, 40, Color::CYAN);
+}
+
+fn render_active(_display: &mut crate::drivers::display::AuraDisplay) {
+    // Panels added in Tasks 7-9.
+}

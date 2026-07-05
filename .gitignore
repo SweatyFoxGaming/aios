@@ -6,3 +6,5 @@ boot/limine/
 *.bak
 *.bk
 bin/
+isodir/
+*.iso

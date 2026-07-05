@@ -27,6 +27,21 @@
 //!
 //! `println!`/`print!` are unaffected by any of this since they write
 //! directly to the serial port via `format_args!`, never touching the heap.
+//!
+//! A second, related family of bugs affects `&str`/`String` operations that
+//! dispatch through a generic trait (`Pattern` for `contains`/
+//! `split_whitespace`, `PartialEq` for `==`/`match` on string literals):
+//! these corrupt the return address once reached deep enough in a real
+//! boot (not reproducible in short isolated tests -- see `contains`'s doc
+//! comment for the isolation method that found this). `contains`,
+//! `str_eq`, and `first_word` below are plain hand-written replacements.
+//!
+//! A third, separate bug: repeatedly formatting an `f32` with a precision
+//! specifier (`{:.2}`) inside a loop hangs (not crashes) on this target --
+//! found in `events::list_events`, fixed there by switching to plain `{}`
+//! Display formatting. A single non-looped `{:.2}` call (`kairos::log_status`)
+//! works fine, so this appears specific to repeated/looped precision
+//! formatting; no helper needed here since plain `{}` is the fix.
 
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -52,6 +67,83 @@ pub fn zeroed_vec(n: usize) -> Vec<u8> {
         buf.set_len(n);
     }
     buf
+}
+
+/// Safe replacement for `a == b` on `&str` (and, by extension, `match`
+/// arms/`if` chains comparing a `&str` against string literals, which
+/// desugar to the same `PartialEq` call). Same family of bug as
+/// `contains`/`extend_from_slice`: plain byte-by-byte comparison instead
+/// of whatever specialization-dispatched path `str`'s `PartialEq` uses.
+#[must_use]
+pub fn str_eq(a: &str, b: &str) -> bool {
+    let ab = a.as_bytes();
+    let bb = b.as_bytes();
+    if ab.len() != bb.len() {
+        return false;
+    }
+    for i in 0..ab.len() {
+        if ab[i] != bb[i] {
+            return false;
+        }
+    }
+    true
+}
+
+/// Safe replacement for `s.split_whitespace().next()` -- returns the first
+/// whitespace-delimited word (ASCII space/tab only; sufficient for this
+/// kernel's simple shell). `split_whitespace` is Pattern-dispatched (see
+/// `contains`); this is a plain byte scan instead.
+#[must_use]
+pub fn first_word(s: &str) -> &str {
+    let bytes = s.as_bytes();
+    let mut start = 0;
+    while start < bytes.len() && (bytes[start] == b' ' || bytes[start] == b'\t') {
+        start += 1;
+    }
+    let mut end = start;
+    while end < bytes.len() && bytes[end] != b' ' && bytes[end] != b'\t' {
+        end += 1;
+    }
+    // SAFETY: start/end are byte offsets landing on ASCII space/tab
+    // boundaries only, which are always valid UTF-8 char boundaries.
+    unsafe { core::str::from_utf8_unchecked(&bytes[start..end]) }
+}
+
+/// Safe replacement for `haystack.contains(needle)`.
+///
+/// `str::contains` dispatches through the generic `Pattern` trait --
+/// reliably crashes on this target once reached deep enough in a real
+/// boot (same family of bug as `extend_from_slice`/`copy_from_slice`: the
+/// specialization-dispatched standard-library method fails while an
+/// identical hand-written replica always works). Naive O(n*m) substring
+/// search, fine at the message lengths this kernel actually searches.
+#[must_use]
+pub fn contains(haystack: &str, needle: &str) -> bool {
+    let h = haystack.as_bytes();
+    let n = needle.as_bytes();
+    if n.is_empty() {
+        return true;
+    }
+    if n.len() > h.len() {
+        return false;
+    }
+    let mut i = 0;
+    while i + n.len() <= h.len() {
+        let mut matched = true;
+        let mut j = 0;
+        while j < n.len() {
+            if h[i + j] != n[j] {
+                matched = false;
+                break;
+            }
+            j += 1;
+        }
+        if matched {
+            return true;
+        }
+        i += 1;
+    }
+    false
 }
 
 /// Safe replacement for `dst.copy_from_slice(src)`.

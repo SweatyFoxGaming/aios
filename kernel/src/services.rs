@@ -56,7 +56,11 @@ impl ServiceRegistry {
 
     fn find(&self, name: &'static str, token: &Token) -> Option<ServiceEntry> {
         for service in &self.services {
-            if service.name == name {
+            // str_eq instead of `==`: str's PartialEq is the same
+            // specialization-dispatched machinery that corrupts the return
+            // address on this target once reached deep in a real boot (see
+            // safe_alloc::contains's doc comment).
+            if crate::safe_alloc::str_eq(service.name, name) {
                 // Sentinel check
                 crate::sentinel::analyze_intent(token, name, "FindService");
 

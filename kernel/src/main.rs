@@ -222,21 +222,9 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     let sub_id = mnemosyne::add_node(safe_alloc::to_string("Kernel Implementation"));
     mnemosyne::add_relation(sub_id, node_id, common::memory::Relation::PartOf);
 
-    // Deferred: hermes::parse()/dispatch() are individually correct (both
-    // verified in isolation, including preceded by the same mnemosyne calls
-    // above), but calling them here -- after the full PCI/mouse/ramdisk/
-    // filesystem/network/pkg/updater/calliope/ego initialization sequence
-    // that precedes this point in a real boot -- crashes with a corrupted
-    // return address (garbage instruction pointer matching stale stack
-    // content, not this call's own data). Not reproducible with any
-    // isolated subset tried; depends on some cumulative state from the full
-    // sequence. Interrupts being enabled/disabled made no difference.
-    // Left disabled here as a scoped follow-up rather than block on it.
-    /*
     let raw_input = "research solid state batteries";
     let intent = hermes::parse(raw_input);
     hermes::dispatch(&intent);
-    */
 
     pulse::monitor();
     vesta::check_health();
@@ -254,26 +242,8 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
 
     sched::process::load("Shell", alloc::vec![0x90, 0x90, 0x90]);
     drivers::display::aura::render_emblem();
-    // Deferred: fs::shell::start()'s handle_command("info") crashes with a
-    // corrupted return address at this point in a real boot (same
-    // cumulative-state pattern as the hermes::parse/dispatch deferral
-    // above -- not reproducible in isolation, unaffected by reducing the
-    // function's own println! count). Left disabled as a scoped follow-up.
-    // fs::shell::start();
+    fs::shell::start();
 
-    // Deferred: everything below is one-shot demo/status-dump output (not
-    // core kernel functionality). The exact same corrupted-return-address
-    // crash (identical garbage instruction pointer) reproduces here
-    // regardless of which specific function runs next -- reproduced with
-    // hermes::parse/dispatch, fs::shell::start(), and this block in turn,
-    // all individually verified correct in isolation. This points at some
-    // cumulative state specific to this deep in a real boot's execution
-    // (not this call's own code) that wasn't isolated in the time
-    // available. Left disabled as a scoped follow-up; every core subsystem
-    // above this line (arch, memory, APIC, aegis, vault, all 16 services,
-    // PCI, mouse, ramdisk, filesystem, networking, package manager,
-    // updater, calliope, ego, mnemosyne) is confirmed working.
-    /*
     let mock_user_token = Token::empty(100);
     let _ = services::find("RestrictedDebugService", &mock_user_token);
 
@@ -288,7 +258,6 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     vesta::log_status();
     mnemosyne::debug_graph();
     lethe::log_status();
-    */
 
     #[cfg(test)]
     test_main();

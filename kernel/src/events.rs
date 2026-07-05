@@ -67,7 +67,7 @@ pub fn list_events() {
     let bus = EVENT_BUS.lock();
     println!("--- Neural Event Bus Activity ---");
     for event in bus.iter() {
-        println!("[{:.2}] {}", event.significance, event.name);
+        println!("[{}] {}", event.significance, event.name);
     }
     println!("---------------------------------");
 }

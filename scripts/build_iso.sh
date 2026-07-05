@@ -37,7 +37,16 @@ menuentry "Phoenix OS" {
 EOF
 
 if command -v grub-mkrescue >/dev/null 2>&1; then
-    grub-mkrescue -o "$ISO_NAME" "$IMAGE_DIR"
+    # -d /usr/lib/grub/i386-pc forces a BIOS-only image (no EFI boot
+    # catalog at all). Without this, grub-mkrescue builds a hybrid
+    # BIOS+EFI image whenever x86_64-efi grub modules are installed, and
+    # on hardware that boots that USB via UEFI, GRUB's EFI path does its
+    # own separate GOP video-mode negotiation that the BIOS-oriented
+    # `insmod vga`/`terminal_output console` fix above doesn't touch --
+    # and pure UEFI has no legacy VGA text mode to fall back to at all.
+    # This kernel's boot32.asm bootstrap is BIOS-only (32-bit protected
+    # mode handoff), so there's no UEFI path worth keeping anyway.
+    grub-mkrescue -d /usr/lib/grub/i386-pc -o "$ISO_NAME" "$IMAGE_DIR"
     echo "ISO created: $ISO_NAME"
 else
     echo "WARNING: grub-mkrescue not found. ISO cannot be created."

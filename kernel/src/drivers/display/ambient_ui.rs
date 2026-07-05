@@ -4,6 +4,7 @@
 
 use crate::drivers::display::{Color, DISPLAY};
 use alloc::string::String;
+use alloc::vec::Vec;
 use spin::Mutex;
 
 /// Whether the ambient UI is showing just the idle emblem, or the active
@@ -33,10 +34,27 @@ static STATE: Mutex<AmbientState> = Mutex::new(AmbientState {
 });
 
 /// Text typed into the Command panel's input box, submitted to
-/// `fs::shell::handle_command` on Enter (Task 7). Separate from
-/// `keyboard.rs`'s existing `INPUT_BUFFER`, which now serves only the
-/// Chat panel.
+/// `fs::shell::handle_command` on Enter. Separate from `keyboard.rs`'s
+/// existing `INPUT_BUFFER`, which now serves only the Chat panel.
 static COMMAND_INPUT: Mutex<String> = Mutex::new(String::new());
+
+/// Command panel scrollback, capped at 20 lines -- when full, the oldest
+/// line is removed before the newest is pushed, so this Vec's original
+/// `with_capacity` allocation never needs to grow (growing an existing
+/// heap allocation crashes on this target -- see safe_alloc.rs).
+static COMMAND_SCROLLBACK: Mutex<Vec<String>> = Mutex::new(Vec::new());
+const MAX_SCROLLBACK_LINES: usize = 20;
+
+fn push_scrollback(buf: &Mutex<Vec<String>>, line: String) {
+    let mut lines = buf.lock();
+    if lines.capacity() == 0 {
+        *lines = Vec::with_capacity(MAX_SCROLLBACK_LINES);
+    }
+    if lines.len() >= MAX_SCROLLBACK_LINES {
+        lines.remove(0);
+    }
+    lines.push(line);
+}
 
 /// Called from `mouse.rs` on any movement or click.
 pub fn on_mouse_activity() {
@@ -130,9 +148,23 @@ pub fn current_focus() -> Focus {
     STATE.lock().focus
 }
 
-/// Temporary stub -- Task 7 replaces this with real shell-command
-/// dispatch and scrollback rendering.
-pub fn submit_command() {}
+/// Submit the Command panel's current input to `fs::shell::handle_command`
+/// and record both the command and its output in the scrollback.
+pub fn submit_command() {
+    let mut input = COMMAND_INPUT.lock();
+    if input.is_empty() {
+        return;
+    }
+    let cmd = crate::safe_alloc::to_string(&input);
+    input.clear();
+    drop(input);
+
+    push_scrollback(&COMMAND_SCROLLBACK, crate::safe_alloc::concat2("> ", &cmd));
+    let output = crate::fs::shell::handle_command(&cmd);
+    if !output.is_empty() {
+        push_scrollback(&COMMAND_SCROLLBACK, output);
+    }
+}
 
 /// Temporary stub -- Task 8 replaces this with real Hermes dispatch and
 /// chat scrollback rendering.
@@ -176,6 +208,25 @@ fn render_idle(display: &mut crate::drivers::display::AuraDisplay) {
     display.fill_circle(512, 384, 40, Color::CYAN);
 }
 
-fn render_active(_display: &mut crate::drivers::display::AuraDisplay) {
-    // Panels added in Tasks 7-9.
+fn render_active(display: &mut crate::drivers::display::AuraDisplay) {
+    render_command_panel(display);
+}
+
+fn render_command_panel(display: &mut crate::drivers::display::AuraDisplay) {
+    let border_color = if current_focus() == Focus::Command { Color::CYAN } else { Color::WHITE };
+    display.draw_rect(0, 0, 700, 2, border_color);
+    display.draw_rect(0, 0, 2, 384, border_color);
+    display.draw_rect(698, 0, 2, 384, border_color);
+    display.draw_rect(0, 382, 700, 2, border_color);
+
+    let lines = COMMAND_SCROLLBACK.lock();
+    let mut y = 10;
+    for line in lines.iter() {
+        crate::drivers::display::font::draw_text(display, 10, y, line, Color::WHITE);
+        y += crate::drivers::display::font::LINE_HEIGHT;
+    }
+    drop(lines);
+    let input = COMMAND_INPUT.lock();
+    let prompt = crate::safe_alloc::concat2("> ", &input);
+    crate::drivers::display::font::draw_text(display, 10, y, &prompt, Color::CYAN);
 }

@@ -1,43 +1,38 @@
 //! Phoenix Shell: The native command-line interface for Phoenix OS.
 
 use crate::println;
-use crate::print;
 use crate::safe_alloc::{first_word, str_eq};
+use alloc::string::String;
 
-/// Command handler.
-///
-/// Kept to exactly one `println!` call: a function with more than one
-/// `println!` call while a `&str`-derived value (here, `cmd`/`word`) is
-/// live in scope corrupts the return address on this target -- verified by
-/// extensive bisection elsewhere in this kernel (see `events::publish`'s
-/// doc comment). Multi-line output is combined into single calls with
-/// embedded newlines instead of separate `println!` calls per line.
+/// Command handler. Returns its output as a `String` instead of
+/// `println!`-ing directly, so both `start()`'s boot demo and the
+/// Ambient UI's Command panel (`drivers::display::ambient_ui`) can use
+/// the same logic and render/print the result themselves.
 ///
 /// Uses `first_word`/`str_eq` instead of `split_whitespace`/`match` on
-/// `&str`: both are `Pattern`/`PartialEq`-dispatched and hit the same
-/// corrupted-return-address bug as `str::contains` (see
-/// `safe_alloc::contains`'s doc comment) once reached deep enough in a
-/// real boot -- this was the actual root cause of this function's crash,
-/// not its `println!` count.
-pub fn handle_command(cmd: &str) {
+/// `&str`: both are `Pattern`/`PartialEq`-dispatched and corrupt the
+/// return address on this target once reached deep enough in a real
+/// boot (see `safe_alloc::contains`'s doc comment).
+pub fn handle_command(cmd: &str) -> String {
     let word = first_word(cmd);
-    if word.is_empty() { return; }
+    if word.is_empty() {
+        return crate::safe_alloc::to_string("");
+    }
 
     if str_eq(word, "help") {
-        println!("Phoenix OS Shell\nAvailable commands: help, clear, info, ls, whoami, exit");
+        crate::safe_alloc::to_string("Available: help, clear, info, ls, whoami, exit")
     } else if str_eq(word, "clear") {
-        // In a real terminal, we would send ANSI escape codes
-        println!("\x1B[2J\x1B[H");
+        crate::safe_alloc::to_string("")
     } else if str_eq(word, "info") {
-        println!("Phoenix OS v0.1.0\nTarget: x86_64 Low-End Hardware\nStatus: Cognitive Core Active");
+        crate::safe_alloc::to_string("Phoenix OS v0.1.0 - Cognitive Core Active")
     } else if str_eq(word, "whoami") {
-        println!("root@phoenix");
+        crate::safe_alloc::to_string("root@phoenix")
     } else if str_eq(word, "ls") {
-        println!("Documents/\nSystem/\nPhoenixFS/");
+        crate::safe_alloc::to_string("Documents/ System/ PhoenixFS/")
     } else if str_eq(word, "exit") {
-        println!("Shutting down shell...");
+        crate::safe_alloc::to_string("Shutting down shell...")
     } else {
-        println!("Unknown command: {}", word);
+        crate::safe_alloc::concat2("Unknown command: ", word)
     }
 }
 
@@ -45,7 +40,7 @@ pub fn handle_command(cmd: &str) {
 pub fn start() {
     println!("--- Phoenix OS Native Shell ---\nType 'help' for a list of commands.");
     println!("phoenix> info");
-    handle_command("info");
+    println!("{}", handle_command("info"));
     println!("phoenix> ls");
-    handle_command("ls");
+    println!("{}", handle_command("ls"));
 }

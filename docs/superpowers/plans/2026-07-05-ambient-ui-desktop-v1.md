@@ -1524,9 +1524,11 @@ tail -20 /tmp/boot_final.log
 
 Expected: `CLEAN`, and the boot log ends at the same stable point as every prior verified run (no new crashes introduced by any of this work).
 
-- [ ] **Step 3: Interactive verification checklist (manual or via QEMU monitor `sendkey`)**
+- [ ] **Step 3: Interactive verification checklist**
 
-- Press any key or move the mouse (in QEMU, click inside the window then use `sendkey`): background switches from idle emblem to the two-panel-plus-status Active layout.
+**Important, discovered while executing Task 7:** QEMU's monitor `sendkey` command does not reach the guest's keyboard interrupt handler at all under `-display none` in this environment -- verified with a temporary diagnostic print in `ambient_ui::on_key` (never fired for any key) and independently confirmed with the pre-existing, unmodified backtick/`toggle_ghost_shell` binding (also silent), ruling out a regression in this plan's own code. `sendkey` appears to require an actual attached graphical display surface to have "keyboard focus," which `-display none` doesn't provide. This means an agent working headlessly **cannot** exercise real keyboard/mouse input against this kernel — only a human with an actual QEMU display window (or real hardware) can run this checklist. Do not spend further time trying to script this in a headless agent session; verify boot/rendering correctness through the automated checks above and hand this checklist to a human:
+
+- Press any key or move the mouse: background switches from idle emblem to the two-panel-plus-status Active layout.
 - Type in the Command panel (default/last focus, or click its region first): characters appear after the `>` prompt; press Enter; the typed command and its `fs::shell::handle_command` output appear in scrollback (try `help`, `info`, `ls`, `whoami`, and an unknown command).
 - Click inside the Chat panel region, type a message containing "research", press Enter: a "You: ..." line and a "Phoenix: Researching that for you..." line both appear.
 - Confirm the Status panel shows real, changing values consistent with `ego`/`pulse`/`vesta`/`mnemosyne`'s actual current state (not hardcoded placeholder text).

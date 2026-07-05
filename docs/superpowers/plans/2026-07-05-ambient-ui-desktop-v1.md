@@ -89,11 +89,16 @@ header_start:
     ; sometimes hands back no framebuffer tag at all) -- main.rs's
     ; existing `if let Some(Ok(fb_tag))` handling already tolerates that
     ; by simply not initializing the Ambient UI, which must stay true.
+    ;
+    ; `size` per the Multiboot2 spec covers the WHOLE tag, including this
+    ; 8-byte type/flags/size header -- fb_tag_start must therefore start
+    ; at the tag's first byte (`dw 5`), not after the size field, or the
+    ; computed size undercounts by 8 and GRUB misparses the tag.
     align 8
+fb_tag_start:
     dw 5                        ; type = framebuffer
     dw 0                        ; flags
-    dd fb_tag_end - fb_tag_start ; size
-fb_tag_start:
+    dd fb_tag_end - fb_tag_start ; size (20: 8-byte header + 3x4-byte fields)
     dd 1024                     ; width
     dd 768                      ; height
     dd 32                       ; depth (bits per pixel)
@@ -181,13 +186,15 @@ RUSTUP_TOOLCHAIN=nightly cargo +nightly build -p kernel -Z build-std=core,alloc 
 timeout 15 qemu-system-x86_64 -cdrom phoenix-os-grub.iso -serial file:/tmp/boot.log -no-reboot
 ```
 
-Expected: a QEMU window opens (no `-display none` this time) — even though nothing draws real pixels yet, this proves the display mode change didn't break boot. Then check `/tmp/boot.log`:
+Expected: a QEMU window opens (no `-display none` this time). Then check `/tmp/boot.log`:
 
 ```bash
 grep "Framebuffer found" /tmp/boot.log
 ```
 
 Expected: `Framebuffer found: 1024x768. Initializing Aura...` (not `80x25`). Also confirm the full boot log still reaches `[Lethe] Engine active.` with no `EXCEPTION`/panic, same as every prior verified run.
+
+**Encountered when actually executing this task:** `drivers::display::init()` (called unconditionally as soon as a framebuffer tag exists, from the existing code in `main.rs`) immediately calls `AuraDisplay::clear()`, which writes to `self.framebuffer.address` directly as a raw pointer. QEMU's std VGA linear framebuffer sits at physical `0xfd000000` — outside the 2GiB that `boot32.asm`'s original page tables identity-map — so this produced `EXCEPTION: PAGE FAULT, Accessed Address: VirtAddr(0xfd000000)` immediately. Fixed by extending the identity mapping from 2GiB to 4GiB: `p2_tables` grows from `resb 4096 * 2` to `resb 4096 * 4`, `set_up_page_tables` maps `P3_low[0..4)` (not `[0..2)`) to all 4 P2 tables while leaving `P3_high` referencing only the first 2 (the higher-half/kernel mapping doesn't need to grow, only the identity side the framebuffer is accessed through), and the P2 fill loop covers 2048 entries (4GiB) instead of 1024. Verified this doesn't overflow 32-bit arithmetic in the `mov eax, 0x200000 / mul ecx` loop (max value at ecx=2047 is `0xffe00000`, still under `0xffffffff`). If implementing this plan on hardware/an emulator where the framebuffer address differs, adjust the mapped range accordingly — the key check is `grep "Accessed Address" /tmp/boot.log` after this step; if present, the mapping doesn't yet reach that address.
 
 - [ ] **Step 5: Commit**
 

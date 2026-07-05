@@ -198,6 +198,7 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
             pitch: u64::from(fb_tag.pitch()),
             width: u64::from(fb_tag.width()),
             height: u64::from(fb_tag.height()),
+            bpp: fb_tag.bpp(),
         };
         println!(
             "Framebuffer found: {}x{}. Initializing Aura...",

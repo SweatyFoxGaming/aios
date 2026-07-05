@@ -19,6 +19,10 @@ pub struct Framebuffer {
     pub width: u64,
     /// Height in pixels.
     pub height: u64,
+    /// Bits per pixel (expected 32 after requesting a linear graphics
+    /// mode via the Multiboot2 header; kept as a real field rather than
+    /// assumed, since GRUB doesn't have to honor the requested depth).
+    pub bpp: u8,
 }
 
 /// A simple RGBA color.

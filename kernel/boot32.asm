@@ -20,7 +20,28 @@ header_start:
     dd header_end - header_start
     dd -(MULTIBOOT2_MAGIC + ARCH_I386 + (header_end - header_start))
 
+    ; framebuffer request tag (type 5): ask for a 1024x768x32 linear
+    ; graphics mode. GRUB may not honor this exactly (e.g. under UEFI it
+    ; sometimes hands back no framebuffer tag at all) -- main.rs's
+    ; existing `if let Some(Ok(fb_tag))` handling already tolerates that
+    ; by simply not initializing the Ambient UI, which must stay true.
+    ;
+    ; `size` per the Multiboot2 spec covers the WHOLE tag, including this
+    ; 8-byte type/flags/size header -- fb_tag_start must therefore start
+    ; at the tag's first byte (`dw 5`), not after the size field, or the
+    ; computed size undercounts by 8 and GRUB misparses the tag.
+    align 8
+fb_tag_start:
+    dw 5                        ; type = framebuffer
+    dw 0                        ; flags
+    dd fb_tag_end - fb_tag_start ; size (20: 8-byte header + 3x4-byte fields)
+    dd 1024                     ; width
+    dd 768                      ; height
+    dd 32                       ; depth (bits per pixel)
+fb_tag_end:
+
     ; end tag
+    align 8
     dw 0
     dw 0
     dd 8
@@ -34,9 +55,15 @@ p3_table_low:
     resb 4096
 p3_table_high:
     resb 4096
-; 2 PD tables covers 2 x 1GiB = 2GiB via 2MiB pages each (P4[511] only has 2
+; 4 PD tables covers 4 x 1GiB = 4GiB via 2MiB pages each, identity-mapped
+; only (P3_low uses all 4 entries; P3_high still only uses 2, so the
+; higher-half mapping stays at 2GiB -- see set_up_page_tables). Extended
+; from 2GiB to 4GiB because QEMU's std VGA linear framebuffer (requested
+; via the Multiboot2 framebuffer tag above) sits at 0xfd000000, which the
+; original 2GiB identity mapping didn't reach, causing a page fault the
+; moment any pixel was written.
 p2_tables:
-    resb 4096 * 2
+    resb 4096 * 4
 stack_bottom:
     resb 65536
 stack_top:
@@ -129,11 +156,11 @@ set_up_page_tables:
     or eax, 0b11
     mov [p4_table + 511 * 8], eax
 
-    ; P3_low[0..2) -> P2 tables 0..2 (identity: 0..2GiB)
-    ; P3_high[510..512) -> P2 tables 0..2 (higher half: 0xffffffff80000000 up)
-    ; 0xffffffff80000000's P3 index is (0xffffffff80000000 >> 30) & 0x1ff = 510
+    ; P3_low[0..4) -> P2 tables 0..4 (identity: 0..4GiB -- extended from
+    ; 2GiB to reach QEMU's std VGA framebuffer at 0xfd000000, see the
+    ; p2_tables comment above).
     mov ecx, 0
-.map_p3_entries:
+.map_p3_low_entries:
     mov eax, ecx
     imul eax, 4096
     add eax, p2_tables
@@ -141,6 +168,17 @@ set_up_page_tables:
     mov ebx, p3_table_low
     mov [ebx + ecx * 8], eax
 
+    inc ecx
+    cmp ecx, 4
+    jne .map_p3_low_entries
+
+    ; P3_high[510..512) -> P2 tables 0..2 (higher half: 0xffffffff80000000
+    ; up, unchanged at 2GiB -- the kernel/heap only ever need the first
+    ; 2GiB up there; only the identity side needed extending for the
+    ; framebuffer). 0xffffffff80000000's P3 index is
+    ; (0xffffffff80000000 >> 30) & 0x1ff = 510.
+    mov ecx, 0
+.map_p3_high_entries:
     mov eax, ecx
     imul eax, 4096
     add eax, p2_tables
@@ -150,11 +188,12 @@ set_up_page_tables:
 
     inc ecx
     cmp ecx, 2
-    jne .map_p3_entries
+    jne .map_p3_high_entries
 
-    ; Fill both P2 tables (2 * 512 = 1024 entries) with 2MiB pages covering
-    ; physical addresses 0..2GiB, identical mapping used by both the identity
-    ; and higher-half views (they point at the same P2 tables).
+    ; Fill all 4 P2 tables (4 * 512 = 2048 entries) with 2MiB pages
+    ; covering physical addresses 0..4GiB. The identity view (P3_low) sees
+    ; all 2048; the higher-half view (P3_high) only references the first
+    ; 1024 of them (the first 2 P2 tables), so it still only covers 2GiB.
     mov ecx, 0
 .map_p2_entries:
     mov eax, 0x200000 ; 2MiB
@@ -163,7 +202,7 @@ set_up_page_tables:
     mov [p2_tables + ecx * 8], eax
 
     inc ecx
-    cmp ecx, 1024
+    cmp ecx, 2048
     jne .map_p2_entries
 
     ret

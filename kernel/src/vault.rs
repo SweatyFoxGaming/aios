@@ -30,6 +30,6 @@ pub fn seal_secret(data: &[u8]) -> [u8; 32] {
 
     let mut out = [0u8; 32];
     let bytes = hash.to_le_bytes();
-    out[..8].copy_from_slice(&bytes);
+    crate::safe_alloc::copy_from_slice(&mut out[..8], &bytes);
     out
 }

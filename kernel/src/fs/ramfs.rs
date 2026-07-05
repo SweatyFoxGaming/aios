@@ -1,8 +1,9 @@
 //! `RamFS`: A basic memory-backed file system for Iris.
 
 use crate::fs::FileSystem;
+use crate::safe_alloc::to_string;
 use alloc::collections::BTreeMap;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
 use spin::Mutex;
 
@@ -33,7 +34,7 @@ impl FileSystem for RamFS {
     }
 
     fn write(&mut self, path: &str, data: Vec<u8>) -> bool {
-        self.files.lock().insert(path.to_string(), data);
+        self.files.lock().insert(to_string(path), data);
         true
     }
 }

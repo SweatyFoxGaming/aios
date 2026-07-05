@@ -2,7 +2,6 @@
 //! Monitors agent consistency and resource leakage.
 
 use crate::println;
-use alloc::string::ToString;
 
 /// Checks for inconsistencies or "exhaustion" in AI modules.
 pub fn check_health() {
@@ -10,7 +9,7 @@ pub fn check_health() {
     let consistency_score = 1.0;
 
     if consistency_score < 0.7 {
-        crate::events::publish("Vesta: AI Consistency Low".to_string(), 0.8);
+        crate::events::publish("Vesta: AI Consistency Low", 0.8f32.to_bits());
         crate::ego::set_state(crate::ego::PresenceState::Dreaming);
     }
 }

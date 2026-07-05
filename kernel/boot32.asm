@@ -207,6 +207,18 @@ error:
 
 bits 64
 long_mode_start:
+    ; Clear the direction flag -- the SysV ABI requires DF=0 on entry to any
+    ; compiled function and guarantees it stays that way (compiled code never
+    ; emits std/cld around ordinary operations). GRUB/BIOS leaves DF in
+    ; whatever state it was already in, not necessarily clear. Left unset,
+    ; every `rep movsb`/`movsq`/`stosb` the Rust code's memcpy/memset
+    ; compiler-builtins execute runs backwards, corrupting whatever memory
+    ; is adjacent to the actual source/destination -- this was the real
+    ; cause of the seemingly-random cascading exceptions (different type
+    ; every run, nonsensical instruction pointers) seen everywhere a copy
+    ; larger than a few bytes was attempted (e.g. Vec::extend_from_slice).
+    cld
+
     ; Clear segment registers -- the GDT has no data segments; zero is a
     ; valid null selector for all of them in long mode.
     mov ax, 0

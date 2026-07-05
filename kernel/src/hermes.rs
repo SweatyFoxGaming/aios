@@ -1,6 +1,7 @@
 //! Hermes: Intent parsing and orchestration for JARVIS.
 
 use crate::println;
+use crate::safe_alloc::to_string;
 use crate::synapse;
 use alloc::string::String;
 use common::synapse::Message;
@@ -26,8 +27,8 @@ pub fn parse(input: &str) -> Intent {
     };
 
     Intent {
-        raw: String::from(input),
-        action: String::from(action),
+        raw: to_string(input),
+        action: to_string(action),
         significance: 0.8,
     }
 }
@@ -39,6 +40,6 @@ pub fn dispatch(intent: &Intent) {
     if intent.action == "SelfRepair" {
         crate::ghost::heal("TargetedService");
     } else {
-        synapse::send(Message::new("Hermes", "CognitiveCore", intent.action.clone()));
+        synapse::send(Message::new("Hermes", "CognitiveCore", to_string(&intent.action)));
     }
 }

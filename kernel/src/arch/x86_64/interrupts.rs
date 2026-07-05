@@ -1,6 +1,6 @@
 //! Interrupt Descriptor Table (IDT) implementation.
 use crate::println;
-use alloc::string::ToString;
+use crate::safe_alloc::{concat2, concat3};
 use common::security::Token;
 use lazy_static::lazy_static;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
@@ -36,6 +36,28 @@ lazy_static! {
         idt.divide_error.set_handler_fn(divide_error_handler);
         idt.invalid_opcode.set_handler_fn(invalid_opcode_handler);
         idt.page_fault.set_handler_fn(page_fault_handler);
+        // The rest of the CPU exception vectors were previously left
+        // "not present" -- any of them firing (e.g. a #GP from an
+        // FPU/SSE-related instruction, since this target disables SSE) would
+        // hit a missing IDT entry, which itself raises #GP, which ALSO hits
+        // a missing handler, escalating straight past our double-fault
+        // handler into an unrecoverable triple-fault/CPU-reset loop. That
+        // is what was actually behind every "garbage instruction pointer" /
+        // cascading-fault symptom seen while debugging fingerprint::gather().
+        idt.device_not_available
+            .set_handler_fn(device_not_available_handler);
+        idt.invalid_tss.set_handler_fn(invalid_tss_handler);
+        idt.segment_not_present
+            .set_handler_fn(segment_not_present_handler);
+        idt.stack_segment_fault
+            .set_handler_fn(stack_segment_fault_handler);
+        idt.general_protection_fault
+            .set_handler_fn(general_protection_fault_handler);
+        idt.x87_floating_point
+            .set_handler_fn(x87_floating_point_handler);
+        idt.alignment_check.set_handler_fn(alignment_check_handler);
+        idt.simd_floating_point
+            .set_handler_fn(simd_floating_point_handler);
         unsafe {
             idt.double_fault
                 .set_handler_fn(double_fault_handler)
@@ -51,6 +73,16 @@ lazy_static! {
     };
 }
 
+/// Prints the fields of an `InterruptStackFrame` individually.
+///
+/// The whole-struct `{:#?}` pretty-Debug path causes a cascading re-fault
+/// (see page_fault_handler's history) -- always use this instead.
+fn print_stack_frame(stack_frame: &InterruptStackFrame) {
+    println!("instruction_pointer: {:?}", stack_frame.instruction_pointer);
+    println!("code_segment: {:?}", stack_frame.code_segment);
+    println!("stack_pointer: {:?}", stack_frame.stack_pointer);
+}
+
 /// Initialize the IDT.
 pub fn init_idt() {
     IDT.load();
@@ -61,13 +93,14 @@ fn reflective_audit(name: &'static str, details: &str) {
     let system_token = Token::empty(0);
     crate::audit::log(
         &system_token,
-        "EXCEPTION: ".to_string() + name + " - " + details,
+        concat2(&concat3("EXCEPTION: ", name, " - "), details),
         "Reflected",
     );
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
-    println!("EXCEPTION: BREAKPOINT\n{stack_frame:#?}");
+    println!("EXCEPTION: BREAKPOINT");
+    print_stack_frame(&stack_frame);
     reflective_audit("Breakpoint", "Handled");
 }
 
@@ -75,18 +108,100 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
+    println!("EXCEPTION: DOUBLE FAULT");
+    print_stack_frame(&stack_frame);
     reflective_audit("Double Fault", "CRITICAL");
-    panic!("EXCEPTION: DOUBLE FAULT\n{stack_frame:#?}");
+    #[allow(clippy::empty_loop)]
+    loop {}
 }
 
 extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
-    println!("EXCEPTION: DIVIDE ERROR\n{stack_frame:#?}");
+    println!("EXCEPTION: DIVIDE ERROR");
+    print_stack_frame(&stack_frame);
     reflective_audit("Divide By Zero", "Handled");
+    #[allow(clippy::empty_loop)]
+    loop {}
 }
 
 extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: InterruptStackFrame) {
-    println!("EXCEPTION: INVALID OPCODE\n{stack_frame:#?}");
+    println!("EXCEPTION: INVALID OPCODE");
+    print_stack_frame(&stack_frame);
     reflective_audit("Invalid Opcode", "Handled");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn device_not_available_handler(stack_frame: InterruptStackFrame) {
+    println!("EXCEPTION: DEVICE NOT AVAILABLE (FPU/SSE state accessed without CR0.TS clear)");
+    print_stack_frame(&stack_frame);
+    reflective_audit("Device Not Available", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn invalid_tss_handler(stack_frame: InterruptStackFrame, error_code: u64) {
+    println!("EXCEPTION: INVALID TSS, error_code={error_code:#x}");
+    print_stack_frame(&stack_frame);
+    reflective_audit("Invalid TSS", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn segment_not_present_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    println!("EXCEPTION: SEGMENT NOT PRESENT, error_code={error_code:#x}");
+    print_stack_frame(&stack_frame);
+    reflective_audit("Segment Not Present", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn stack_segment_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    println!("EXCEPTION: STACK SEGMENT FAULT, error_code={error_code:#x}");
+    print_stack_frame(&stack_frame);
+    reflective_audit("Stack Segment Fault", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn general_protection_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    println!("EXCEPTION: GENERAL PROTECTION FAULT, error_code={error_code:#x}");
+    print_stack_frame(&stack_frame);
+    reflective_audit("General Protection Fault", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn x87_floating_point_handler(stack_frame: InterruptStackFrame) {
+    println!("EXCEPTION: X87 FLOATING POINT");
+    print_stack_frame(&stack_frame);
+    reflective_audit("x87 Floating Point", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn alignment_check_handler(stack_frame: InterruptStackFrame, error_code: u64) {
+    println!("EXCEPTION: ALIGNMENT CHECK, error_code={error_code:#x}");
+    print_stack_frame(&stack_frame);
+    reflective_audit("Alignment Check", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
+}
+
+extern "x86-interrupt" fn simd_floating_point_handler(stack_frame: InterruptStackFrame) {
+    println!("EXCEPTION: SIMD FLOATING POINT");
+    print_stack_frame(&stack_frame);
+    reflective_audit("SIMD Floating Point", "Halted");
+    #[allow(clippy::empty_loop)]
+    loop {}
 }
 
 extern "x86-interrupt" fn page_fault_handler(

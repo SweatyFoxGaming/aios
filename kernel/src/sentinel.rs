@@ -2,7 +2,6 @@
 //! Monitors the Synapse IPC bus for deviations from normal behavior.
 
 use crate::println;
-use alloc::string::ToString;
 use common::security::Token;
 
 /// Triggers a system-wide security lockdown.
@@ -12,7 +11,11 @@ pub fn lockdown(trigger_token: &Token, reason: &str) {
     println!("[Sentinel] Reason: {}", reason);
 
     // Log to immutable ledger
-    crate::audit::log(trigger_token, "SECURITY LOCKDOWN: ".to_string() + reason, "Neutralized");
+    crate::audit::log(
+        trigger_token,
+        crate::safe_alloc::concat2("SECURITY LOCKDOWN: ", reason),
+        "Neutralized",
+    );
 
     // Switch OS to restricted state
     crate::ego::set_state(crate::ego::PresenceState::Maintenance);

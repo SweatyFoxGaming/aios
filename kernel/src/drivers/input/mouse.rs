@@ -15,12 +15,19 @@ pub struct MouseState {
     pub middle: bool,
 }
 
+/// Max poll attempts before giving up on a PS/2 controller status bit. This
+/// environment's QEMU PS/2 controller emulation was observed to never clear
+/// the expected bit, hanging boot forever with no possible recovery; a
+/// bounded retry lets boot continue (without a working mouse) instead.
+const MOUSE_WAIT_ATTEMPTS: u32 = 100_000;
+
 fn mouse_wait(a_type: u8) {
     let mut status_port: Port<u8> = Port::new(0x64);
-    if a_type == 0 {
-        while (unsafe { status_port.read() } & 1) == 1 {}
-    } else {
-        while (unsafe { status_port.read() } & 2) == 2 {}
+    let mask = if a_type == 0 { 1 } else { 2 };
+    for _ in 0..MOUSE_WAIT_ATTEMPTS {
+        if (unsafe { status_port.read() } & mask) != mask {
+            break;
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 //! Oracle: System call interface for Phoenix OS.
 
 use crate::println;
-use alloc::string::String;
+use crate::safe_alloc::to_string;
 use common::security::{Token, Capability};
 use common::synapse::Message;
 
@@ -30,7 +30,7 @@ pub fn handle_syscall(id: u64, arg1: u64, arg2: u64) -> u64 {
             }
             let sender = "UserSpace";
             let target = "Kernel";
-            let intent = String::from("UserRequest");
+            let intent = to_string("UserRequest");
             crate::synapse::send(Message::new(sender, target, intent));
             0
         }
@@ -48,7 +48,7 @@ pub fn handle_syscall(id: u64, arg1: u64, arg2: u64) -> u64 {
                 return 1;
             }
             println!("[Oracle] Syscall: LOG (Secure)");
-            crate::audit::log(&caller_token, String::from("Manual log entry"), "Success");
+            crate::audit::log(&caller_token, to_string("Manual log entry"), "Success");
             0
         }
         ids::EXIT => {

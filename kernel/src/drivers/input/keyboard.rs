@@ -16,8 +16,10 @@ lazy_static! {
         HandleControl::Ignore
     ));
 
-    /// Buffer for raw input before Enter is pressed.
-    static ref INPUT_BUFFER: Mutex<String> = Mutex::new(String::new());
+    /// Buffer for raw input before Enter is pressed. Preallocated so
+    /// `.push` below never needs to grow the buffer -- growing an existing
+    /// heap allocation crashes on this target (see safe_alloc.rs).
+    static ref INPUT_BUFFER: Mutex<String> = Mutex::new(String::with_capacity(256));
 }
 
 /// Handle a keyboard interrupt and parse the scancode.

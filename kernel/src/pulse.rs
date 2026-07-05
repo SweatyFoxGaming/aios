@@ -2,7 +2,6 @@
 //! Monitors RAM pressure and CPU load to keep the system responsive on low-end hardware.
 
 use crate::println;
-use alloc::string::ToString;
 
 /// Current resource pressure levels.
 pub struct Pressure {
@@ -21,13 +20,13 @@ pub fn monitor() {
     };
 
     if pressure.memory > 0.8 {
-        crate::events::publish("Pulse: CRITICAL Memory Pressure".to_string(), 0.9);
+        crate::events::publish("Pulse: CRITICAL Memory Pressure", 0.9f32.to_bits());
         // Trigger self-optimization (Dreaming state)
         crate::ego::set_state(crate::ego::PresenceState::Dreaming);
         // Invoke Lethe to prune memory
         crate::lethe::prune(pressure.memory);
     } else if pressure.memory > 0.5 {
-        crate::events::publish("Pulse: Moderate Memory Pressure".to_string(), 0.6);
+        crate::events::publish("Pulse: Moderate Memory Pressure", 0.6f32.to_bits());
         crate::lethe::prune(pressure.memory);
     }
 }

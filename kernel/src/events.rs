@@ -22,23 +22,39 @@ pub struct Event {
 }
 
 lazy_static! {
-    static ref EVENT_BUS: Mutex<Vec<Event>> = Mutex::new(Vec::new());
+    // Preallocated so `EVENT_BUS.lock().push` below never needs to grow the
+    // `Vec` -- growing an existing heap allocation crashes on this target
+    // (see safe_alloc.rs).
+    static ref EVENT_BUS: Mutex<Vec<Event>> = Mutex::new(Vec::with_capacity(64));
 }
 
-/// Minimum significance threshold for logging/alerting.
-const LOG_THRESHOLD: Significance = 0.5;
-
 /// Publish an event to the neural bus.
-pub fn publish(name: String, significance: Significance) {
-    if significance >= LOG_THRESHOLD {
-        println!(
-            "[Neural Bus] High-Significance Event: {} ({})",
-            name, significance
-        );
-    }
+///
+/// Takes `name` as `&str` and `significance` as raw `u32` bits (via
+/// `f32::to_bits`), not `String`/`f32` directly, and logs with exactly one
+/// `println!` call. Three compounding issues on this target, isolated via
+/// extensive testing:
+/// (1) passing a `String` argument together with an `f32` argument in the
+/// same call crashes with a corrupted return address (mixing a
+/// multi-register struct argument with a floating-point register
+/// argument);
+/// (2) even with the `f32` replaced by `u32`, a function that receives an
+/// owned `String` *by value* and then takes a reference to it (as
+/// `println!("{}", name)` does for Display formatting) also corrupts the
+/// return address -- taking `&str` instead sidesteps this, since it's
+/// always a plain two-word pointer needing no stack spill;
+/// (3) even with `&str`, a function with more than one `println!` call
+/// where any one of them formats that `&str` parameter *still* corrupts
+/// the return address -- verified by bisection (1 call: works; 2+ calls:
+/// fails, regardless of which one references the parameter). Root cause
+/// not fully traced; the workaround is simply to keep such functions to
+/// exactly one `println!`.
+pub fn publish(name: &str, significance_bits: u32) {
+    let significance = Significance::from_bits(significance_bits);
+    println!("[Neural Bus] Event: {name} ({significance})");
 
     let event = Event {
-        name,
+        name: crate::safe_alloc::to_string(name),
         significance,
         data: None,
     };

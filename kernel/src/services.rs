@@ -1,7 +1,7 @@
 //! Service Registry for Phoenix OS.
 //! This allows kernel modules to register and discover structured APIs.
 
-use alloc::string::ToString;
+use crate::safe_alloc::concat2;
 use alloc::vec::Vec;
 use common::security::{Capability, Token};
 use lazy_static::lazy_static;
@@ -29,9 +29,12 @@ struct ServiceRegistry {
 }
 
 impl ServiceRegistry {
-    const fn new() -> Self {
+    /// Preallocated well above the kernel's known service count so
+    /// `services.push` below never needs to grow the `Vec` -- growing an
+    /// existing heap allocation crashes on this target (see safe_alloc.rs).
+    fn new() -> Self {
         Self {
-            services: Vec::new(),
+            services: Vec::with_capacity(64),
         }
     }
 
@@ -40,14 +43,14 @@ impl ServiceRegistry {
         if !token.has(Capability::ServiceRegister) {
             crate::audit::log(
                 token,
-                "Register Service: ".to_string() + entry.name,
+                concat2("Register Service: ", entry.name),
                 "Denied (Unauthorized)",
             );
             return false;
         }
 
         self.services.push(*entry);
-        crate::audit::log(token, "Register Service: ".to_string() + entry.name, "Success");
+        crate::audit::log(token, concat2("Register Service: ", entry.name), "Success");
         true
     }
 
@@ -67,13 +70,13 @@ impl ServiceRegistry {
                     if !token.has(cap) {
                         crate::audit::log(
                             token,
-                            "Access Service: ".to_string() + name,
+                            concat2("Access Service: ", name),
                             "Denied (Missing Capability)",
                         );
                         return None;
                     }
                 }
-                crate::audit::log(token, "Access Service: ".to_string() + name, "Granted");
+                crate::audit::log(token, concat2("Access Service: ", name), "Granted");
                 return Some(*service);
             }
         }

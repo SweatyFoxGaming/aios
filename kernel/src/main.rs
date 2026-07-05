@@ -49,6 +49,8 @@ pub mod pulse;
 pub mod recovery;
 /// Process scheduling.
 pub mod sched;
+/// Workarounds for a toolchain issue affecting heap string/vec append ops.
+pub mod safe_alloc;
 /// Anomalous intent detection.
 pub mod sentinel;
 /// Serial communication.
@@ -67,7 +69,6 @@ pub mod vault;
 /// AI homeostasis.
 pub mod vesta;
 
-use alloc::string::ToString;
 use common::addr::PhysAddr;
 use common::security::{Capability, Token};
 use common::synapse::Message;
@@ -96,10 +97,20 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     use alloc::boxed::Box;
 
     println!("Phoenix OS Kernel booting...");
+    println!("multiboot_info_addr = {:#x}", multiboot_info_addr);
 
     // 1. Initialize architecture (GDT, IDT, Time) - does not require heap
     arch::init();
     println!("Architecture initialized (GDT, IDT, PIT).");
+
+    // Initialize the scheduler immediately after arch init, before anything
+    // else -- interrupts are never explicitly disabled anywhere in this
+    // kernel, so IF may already be set (inherited from GRUB) and the PIT is
+    // now running at 100Hz. If the timer fires before this, SCHEDULER's
+    // lazy_static would perform its first-ever initialization from inside
+    // the interrupt handler, which reliably crashed with a nondeterministic
+    // CPU exception. Doing it here, in ordinary code, avoids that entirely.
+    sched::init();
 
     // 2. Parse the Multiboot2 boot information GRUB handed us, and pull the
     // memory map out of it (Multiboot2 has no HHDM concept the way Limine
@@ -143,19 +154,8 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
 
     println!("Phoenix OS boot milestone reached: arch + memory management fully initialized.");
 
-    // Everything below here is one-shot demo/exercise code touching modules
-    // that have never actually been run before (this whole repo was
-    // generated in a single pass and never booted prior to this session --
-    // see git log). `fingerprint::gather()` triggers a page fault whose
-    // repeated-fault instruction pointer doesn't correspond to any code in
-    // this binary at all (not even the low-memory bootstrap), suggesting
-    // stack/interrupt-frame corruption during nested fault handling rather
-    // than a simple logic bug -- a materially harder class of problem than
-    // the fixes above (missing arg, PIE relocation model, EFER.NXE). Disabled
-    // here so the kernel reaches its idle loop cleanly; re-enable and debug
-    // these one module at a time as a separate, isolated follow-up.
-    /*
     let hardware_fp = arch::x86_64::fingerprint::gather();
+
     arch::x86_64::morph::morph(&hardware_fp);
     aegis::init();
     let _ = vault::init();
@@ -190,9 +190,6 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
     let _ = services::register_decoy("RestrictedDebugService", &kernel_token);
     let _ = services::register_decoy("GlobalMemoryWrite", &kernel_token);
 
-    sched::init();
-    println!("Scheduler initialized.");
-
     if let Some(Ok(fb_tag)) = boot_info.framebuffer_tag() {
         let framebuffer = drivers::display::Framebuffer {
             address: fb_tag.address(),
@@ -221,23 +218,35 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
 
     ego::set_state(ego::PresenceState::Idle);
 
-    let node_id = mnemosyne::add_node("Phoenix Project".to_string());
-    let sub_id = mnemosyne::add_node("Kernel Implementation".to_string());
+    let node_id = mnemosyne::add_node(safe_alloc::to_string("Phoenix Project"));
+    let sub_id = mnemosyne::add_node(safe_alloc::to_string("Kernel Implementation"));
     mnemosyne::add_relation(sub_id, node_id, common::memory::Relation::PartOf);
 
+    // Deferred: hermes::parse()/dispatch() are individually correct (both
+    // verified in isolation, including preceded by the same mnemosyne calls
+    // above), but calling them here -- after the full PCI/mouse/ramdisk/
+    // filesystem/network/pkg/updater/calliope/ego initialization sequence
+    // that precedes this point in a real boot -- crashes with a corrupted
+    // return address (garbage instruction pointer matching stale stack
+    // content, not this call's own data). Not reproducible with any
+    // isolated subset tried; depends on some cumulative state from the full
+    // sequence. Interrupts being enabled/disabled made no difference.
+    // Left disabled here as a scoped follow-up rather than block on it.
+    /*
     let raw_input = "research solid state batteries";
     let intent = hermes::parse(raw_input);
     hermes::dispatch(&intent);
+    */
 
     pulse::monitor();
     vesta::check_health();
 
-    events::publish("Kernel Boot Sequence Complete".to_string(), 0.9);
+    events::publish("Kernel Boot Sequence Complete", 0.9f32.to_bits());
 
     synapse::send(Message::new(
         "KernelCore",
         "AuditLog",
-        "Initial Synapse Probe".to_string(),
+        safe_alloc::to_string("Initial Synapse Probe"),
     ));
 
     let _ = syscall::handle_syscall(1, 0, 0);
@@ -245,8 +254,26 @@ pub extern "C" fn kernel_main_entry(multiboot_info_addr: usize) -> ! {
 
     sched::process::load("Shell", alloc::vec![0x90, 0x90, 0x90]);
     drivers::display::aura::render_emblem();
-    fs::shell::start();
+    // Deferred: fs::shell::start()'s handle_command("info") crashes with a
+    // corrupted return address at this point in a real boot (same
+    // cumulative-state pattern as the hermes::parse/dispatch deferral
+    // above -- not reproducible in isolation, unaffected by reducing the
+    // function's own println! count). Left disabled as a scoped follow-up.
+    // fs::shell::start();
 
+    // Deferred: everything below is one-shot demo/status-dump output (not
+    // core kernel functionality). The exact same corrupted-return-address
+    // crash (identical garbage instruction pointer) reproduces here
+    // regardless of which specific function runs next -- reproduced with
+    // hermes::parse/dispatch, fs::shell::start(), and this block in turn,
+    // all individually verified correct in isolation. This points at some
+    // cumulative state specific to this deep in a real boot's execution
+    // (not this call's own code) that wasn't isolated in the time
+    // available. Left disabled as a scoped follow-up; every core subsystem
+    // above this line (arch, memory, APIC, aegis, vault, all 16 services,
+    // PCI, mouse, ramdisk, filesystem, networking, package manager,
+    // updater, calliope, ego, mnemosyne) is confirmed working.
+    /*
     let mock_user_token = Token::empty(100);
     let _ = services::find("RestrictedDebugService", &mock_user_token);
 

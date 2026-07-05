@@ -2,7 +2,7 @@
 
 use crate::drivers::manager::{Device, DeviceType};
 use crate::println;
-use alloc::format;
+use crate::safe_format;
 use x86_64::instructions::port::Port;
 
 /// PCI configuration port.
@@ -42,9 +42,9 @@ pub fn scan_bus() {
 
                 // Register with Hephaestus
                 crate::drivers::manager::register(Device {
-                    name: format!("PCI-{vendor_id:x}:{device_id:x}"),
+                    name: safe_format!("PCI-{vendor_id:x}:{device_id:x}"),
                     device_type: DeviceType::Unknown,
-                    bus_info: Some(format!("PCI Bus {bus}, Slot {slot}")),
+                    bus_info: Some(safe_format!("PCI Bus {bus}, Slot {slot}")),
                 });
             }
         }

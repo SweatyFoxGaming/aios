@@ -3,8 +3,6 @@
 
 use crate::println;
 use alloc::string::String;
-use alloc::string::ToString;
-use raw_cpuid::CpuId;
 
 /// Represents the hardware identity of the system.
 pub struct HardwareFingerprint {
@@ -14,18 +12,51 @@ pub struct HardwareFingerprint {
     pub has_huge_pages: bool,
 }
 
+/// Result of a single `cpuid` leaf query.
+struct CpuidResult {
+    eax: u32,
+    ebx: u32,
+    ecx: u32,
+    edx: u32,
+}
+
+/// Executes `cpuid` for the given leaf/sub-leaf.
+///
+/// Implemented directly via inline assembly rather than the `raw-cpuid`
+/// crate: calling into that crate's compiled code at this point in boot
+/// reliably crashed with a different CPU exception every run. That turned
+/// out to be a symptom of a much broader issue -- see `safe_alloc.rs` --
+/// rather than anything specific to `raw-cpuid`. Kept as hand-written asm
+/// regardless since it avoids the dependency and was verified reliable.
+fn cpuid(leaf: u32, sub_leaf: u32) -> CpuidResult {
+    let (eax, ebx, ecx, edx): (u32, u32, u32, u32);
+    unsafe {
+        core::arch::asm!(
+            "push rbx",
+            "cpuid",
+            "mov {ebx_out:e}, ebx",
+            "pop rbx",
+            inout("eax") leaf => eax,
+            ebx_out = out(reg) ebx,
+            inout("ecx") sub_leaf => ecx,
+            out("edx") edx,
+        );
+    }
+    CpuidResult { eax, ebx, ecx, edx }
+}
+
 /// Gathers the hardware fingerprint of the current machine.
 #[must_use]
 pub fn gather() -> HardwareFingerprint {
-    let cpuid = CpuId::new();
+    let vendor_leaf = cpuid(0, 0);
+    let vendor_bytes: [u8; 12] =
+        unsafe { core::mem::transmute([vendor_leaf.ebx, vendor_leaf.edx, vendor_leaf.ecx]) };
+    let vendor_str = core::str::from_utf8(&vendor_bytes).unwrap_or("InvalidVendorString");
+    let cpu_vendor = crate::safe_alloc::to_string(vendor_str);
 
-    let cpu_vendor = cpuid
-        .get_vendor_info()
-        .map_or_else(|| "Unknown".to_string(), |vi| vi.as_str().to_string());
-
-    let has_huge_pages = cpuid
-        .get_extended_processor_and_feature_identifiers()
-        .is_some_and(|fi| fi.has_1gib_pages());
+    // EAX=0x80000001, EDX bit 26 indicates 1GiB page support (AMD/Intel).
+    let ext_features = cpuid(0x8000_0001, 0);
+    let has_huge_pages = ext_features.edx & (1 << 26) != 0;
 
     HardwareFingerprint {
         cpu_vendor,

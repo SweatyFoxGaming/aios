@@ -34,7 +34,10 @@ pub struct Device {
 }
 
 lazy_static! {
-    static ref DEVICES: Mutex<Vec<Device>> = Mutex::new(Vec::new());
+    // Preallocated so `DEVICES.lock().push` below never needs to grow the
+    // `Vec` -- growing an existing heap allocation crashes on this target
+    // (see safe_alloc.rs).
+    static ref DEVICES: Mutex<Vec<Device>> = Mutex::new(Vec::with_capacity(64));
 }
 
 /// Register a new device with the manager.

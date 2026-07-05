@@ -8,8 +8,9 @@ use x86_64::VirtAddr;
 
 /// Start address of the kernel heap.
 pub const HEAP_START: usize = 0x_4444_4444_0000;
-/// Size of the kernel heap.
-pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+/// Size of the kernel heap. Needs to comfortably fit the in-memory RAM disk
+/// (4MiB) plus everything else the kernel allocates.
+pub const HEAP_SIZE: usize = 32 * 1024 * 1024; // 32 MiB
 
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();

@@ -50,10 +50,8 @@ pub fn set_state(new_state: PresenceState) {
         crate::drivers::audio::speaker::stop_tone();
     }
 
-    crate::events::publish(
-        alloc::format!("Ego: State transition {old_state:?} -> {new_state:?}"),
-        0.8,
-    );
+    let msg = crate::safe_format!("Ego: State transition {old_state:?} -> {new_state:?}");
+    crate::events::publish(&msg, 0.8f32.to_bits());
 }
 
 /// Issue a new capability token.

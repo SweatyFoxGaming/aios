@@ -24,7 +24,10 @@ pub struct AuditEntry {
 }
 
 lazy_static! {
-    static ref AUDIT_LOG: Mutex<Vec<AuditEntry>> = Mutex::new(Vec::new());
+    // Preallocated well above expected boot-time log volume so `logs.push`
+    // below never needs to grow the `Vec` -- growing an existing heap
+    // allocation crashes on this target (see safe_alloc.rs).
+    static ref AUDIT_LOG: Mutex<Vec<AuditEntry>> = Mutex::new(Vec::with_capacity(128));
 }
 
 /// Simple XOR-based rolling hash for early ledger integrity.

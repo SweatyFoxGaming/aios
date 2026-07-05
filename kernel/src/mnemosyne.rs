@@ -14,9 +14,12 @@ struct KnowledgeGraph {
 }
 
 lazy_static! {
+    // Preallocated so `nodes.push`/`edges.push` below never need to grow
+    // their `Vec` -- growing an existing heap allocation crashes on this
+    // target (see safe_alloc.rs).
     static ref GRAPH: Mutex<KnowledgeGraph> = Mutex::new(KnowledgeGraph {
-        nodes: Vec::new(),
-        edges: Vec::new(),
+        nodes: Vec::with_capacity(64),
+        edges: Vec::with_capacity(64),
     });
 }
 

@@ -3,7 +3,8 @@
 
 use crate::drivers::manager::{Device, DeviceType};
 use crate::println;
-use alloc::string::{String, ToString};
+use crate::safe_alloc::{concat2, to_string};
+use alloc::string::String;
 
 /// Represents a proxy for a driver running in userspace.
 pub struct DriverProxy {
@@ -34,7 +35,7 @@ impl DriverProxy {
         crate::synapse::send(common::synapse::Message::new(
             "KernelProxy",
             "UserSpaceDriver",
-            "Command: ".to_string() + command,
+            concat2("Command: ", command),
         ));
     }
 }
@@ -45,13 +46,13 @@ pub fn isolate_device(name: &str, device_type: DeviceType) {
         "[Stark Isolation] Moving device {name} [{device_type:?}] to Ring 3 proxy..."
     );
 
-    let proxy = DriverProxy::new(name.to_string(), 0);
+    let proxy = DriverProxy::new(to_string(name), 0);
     proxy.dispatch_command("INIT_ISOLATED");
 
     // Register the proxy as the authoritative handle for this device
     crate::drivers::manager::register(Device {
-        name: "Proxy-".to_string() + name,
+        name: concat2("Proxy-", name),
         device_type,
-        bus_info: Some("Isolated via Stark".to_string()),
+        bus_info: Some(to_string("Isolated via Stark")),
     });
 }

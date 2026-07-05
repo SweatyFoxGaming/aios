@@ -1,8 +1,12 @@
 //! Aura: Framebuffer-based display driver for Phoenix OS.
 
-pub mod aura;
-pub mod engine;
-pub mod transcendent;
+pub mod ambient_ui;
+pub mod font;
+use embedded_graphics::{
+    pixelcolor::{Rgb888, RgbColor},
+    prelude::{DrawTarget, OriginDimensions, Size},
+    Pixel,
+};
 use spin::Mutex;
 
 /// Framebuffer geometry/location, decoupled from any specific boot protocol
@@ -136,6 +140,105 @@ impl AuraDisplay {
             self.draw_rect(0, 0, self.framebuffer.width, 5, Color::BLACK);
             crate::println!("[Aura] Ghost Shell Overlay Deactivated.");
         }
+    }
+
+    /// Write a single pixel. Bounds-checked; out-of-range coordinates are
+    /// silently ignored rather than panicking, since callers (embedded-
+    /// graphics text rendering, circle drawing) routinely compute
+    /// coordinates that fall outside the screen at the edges.
+    pub fn put_pixel(&self, x: u64, y: u64, color: Color) {
+        if x >= self.framebuffer.width || y >= self.framebuffer.height {
+            return;
+        }
+        let ptr = self.framebuffer.address as *mut u8;
+        let pitch = self.framebuffer.pitch / 4;
+        let raw_color = color.pack();
+        unsafe {
+            #[allow(clippy::cast_ptr_alignment)]
+            ptr.cast::<u32>()
+                .add(usize::try_from(y * pitch + x).unwrap())
+                .write_volatile(raw_color);
+        }
+    }
+
+    /// Fill a horizontal span of pixels from `x0` to `x1` inclusive (helper
+    /// for `fill_circle`). Negative coordinates are clamped to 0 rather
+    /// than skipped, matching `put_pixel`'s own bounds handling.
+    fn fill_span(&self, x0: i64, x1: i64, y: i64, color: Color) {
+        if y < 0 {
+            return;
+        }
+        let start = x0.max(0);
+        let mut x = start;
+        while x <= x1 {
+            #[allow(clippy::cast_sign_loss)]
+            self.put_pixel(x as u64, y as u64, color);
+            x += 1;
+        }
+    }
+
+    /// Fill a filled circle using the integer-only Bresenham/midpoint
+    /// circle algorithm (no floating point -- this `no_std` kernel has no
+    /// `libm`, and `core::f64` has no `sqrt` without it), drawing
+    /// horizontal spans across the 4 symmetric octant pairs per step
+    /// rather than individual points.
+    pub fn fill_circle(&self, cx: u64, cy: u64, radius: u64, color: Color) {
+        let cx = i64::try_from(cx).unwrap();
+        let cy = i64::try_from(cy).unwrap();
+        let mut x = i64::try_from(radius).unwrap();
+        let mut y: i64 = 0;
+        let mut err: i64 = 0;
+
+        while x >= y {
+            self.fill_span(cx - x, cx + x, cy + y, color);
+            self.fill_span(cx - x, cx + x, cy - y, color);
+            self.fill_span(cx - y, cx + y, cy + x, color);
+            self.fill_span(cx - y, cx + y, cy - x, color);
+
+            y += 1;
+            err += 1 + 2 * y;
+            if 2 * (err - x) + 1 > 0 {
+                x -= 1;
+                err += 1 - 2 * x;
+            }
+        }
+    }
+}
+
+impl OriginDimensions for AuraDisplay {
+    fn size(&self) -> Size {
+        Size::new(
+            u32::try_from(self.framebuffer.width).unwrap(),
+            u32::try_from(self.framebuffer.height).unwrap(),
+        )
+    }
+}
+
+impl DrawTarget for AuraDisplay {
+    type Color = Rgb888;
+    type Error = core::convert::Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for Pixel(point, color) in pixels {
+            if point.x < 0 || point.y < 0 {
+                continue;
+            }
+            #[allow(clippy::cast_sign_loss)]
+            self.put_pixel(
+                point.x as u64,
+                point.y as u64,
+                Color {
+                    r: color.r(),
+                    g: color.g(),
+                    b: color.b(),
+                    a: 255,
+                },
+            );
+        }
+        Ok(())
     }
 }
 

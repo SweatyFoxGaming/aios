@@ -248,28 +248,45 @@ In `kernel/src/drivers/display/mod.rs`, add these methods to the existing `impl 
         }
     }
 
-    /// Fill a filled circle using the midpoint circle algorithm, drawing
-    /// horizontal spans rather than individual points per octant (simpler
-    /// and fast enough at the radii this UI uses -- tens of pixels, not
-    /// hundreds).
+    /// Fill a horizontal span of pixels from `x0` to `x1` inclusive (helper
+    /// for `fill_circle`). Negative coordinates are clamped to 0 rather
+    /// than skipped, matching `put_pixel`'s own bounds handling.
+    fn fill_span(&self, x0: i64, x1: i64, y: i64, color: Color) {
+        if y < 0 {
+            return;
+        }
+        let start = x0.max(0);
+        let mut x = start;
+        while x <= x1 {
+            self.put_pixel(x as u64, y as u64, color);
+            x += 1;
+        }
+    }
+
+    /// Fill a filled circle using the integer-only Bresenham/midpoint
+    /// circle algorithm (no floating point -- this `no_std` kernel has no
+    /// `libm`, and `core::f64` has no `sqrt` without it), drawing
+    /// horizontal spans across the 4 symmetric octant pairs per step
+    /// rather than individual points.
     pub fn fill_circle(&self, cx: u64, cy: u64, radius: u64, color: Color) {
-        let r = i64::try_from(radius).unwrap();
         let cx = i64::try_from(cx).unwrap();
         let cy = i64::try_from(cy).unwrap();
-        let mut dy = -r;
-        while dy <= r {
-            let dx = ((r * r - dy * dy) as f64).sqrt() as i64;
-            let y = cy + dy;
-            if y >= 0 {
-                let start_x = (cx - dx).max(0);
-                let end_x = cx + dx;
-                let mut x = start_x;
-                while x <= end_x {
-                    self.put_pixel(x as u64, y as u64, color);
-                    x += 1;
-                }
+        let mut x = i64::try_from(radius).unwrap();
+        let mut y: i64 = 0;
+        let mut err: i64 = 0;
+
+        while x >= y {
+            self.fill_span(cx - x, cx + x, cy + y, color);
+            self.fill_span(cx - x, cx + x, cy - y, color);
+            self.fill_span(cx - y, cx + y, cy + x, color);
+            self.fill_span(cx - y, cx + y, cy - x, color);
+
+            y += 1;
+            err += 1 + 2 * y;
+            if 2 * (err - x) + 1 > 0 {
+                x -= 1;
+                err += 1 - 2 * x;
             }
-            dy += 1;
         }
     }
 ```

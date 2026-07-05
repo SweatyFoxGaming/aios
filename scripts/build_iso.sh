@@ -8,6 +8,16 @@ set -e
 # GRUB2/Multiboot2. Run from the repo root after building the kernel:
 #   cargo +nightly build -p kernel -Z build-std=core,alloc --target x86_64-unknown-none
 #   ./scripts/build_iso.sh
+#
+# CONFIRMED WORKING on real hardware (Dell laptop) via Legacy/CSM boot
+# mode specifically -- boot the flashed USB with Legacy Boot/CSM enabled
+# in firmware setup, not UEFI. UEFI boot on that same machine hangs hard
+# at GRUB's "WARNING: no console will be available to OS" message even
+# with every video/gfxterm module stripped from the image (see below);
+# QEMU/OVMF never reproduced that hang (the same warning is harmless
+# there), so it's a real-firmware-specific issue, not anything fixable
+# from this script or the kernel side. Legacy/CSM sidesteps it entirely
+# and boots cleanly end-to-end, VGA text console rendering correctly.
 
 ISO_NAME="phoenix-os-grub.iso"
 IMAGE_DIR="isodir"

@@ -18,16 +18,24 @@ echo "Building Phoenix OS ISO..."
 mkdir -p "$IMAGE_DIR/boot/grub"
 cp "$KERNEL_BIN" "$IMAGE_DIR/boot/kernel.elf"
 
-# `insmod vga` / `terminal_output console` / `gfxpayload=text` are required
-# on at least some real hardware: grub-mkrescue's default gfxterm/video-mode
-# probing can fail outright ("error: no suitable video mode found") on
-# hardware whose BIOS/VESA doesn't support the modes GRUB tries, which
-# freezes the boot before the menu even appears -- QEMU's emulated VBE
-# doesn't hit this, so it went unnoticed until tested on real hardware.
+# Must keep the hybrid BIOS+EFI image (default grub-mkrescue behavior):
+# an earlier attempt forced BIOS-only (-d i386-pc) on the theory that
+# this kernel's boot32.asm bootstrap is BIOS-only anyway, but the test
+# machine didn't recognize that USB as bootable AT ALL -- its firmware
+# requires UEFI boot for removable media, with no usable legacy/CSM
+# fallback. GRUB's multiboot2 loader normalizes CPU state back down to
+# 32-bit protected mode before jumping to the kernel regardless of
+# whether it got there via BIOS or UEFI, so boot32.asm doesn't need to
+# know or care which path was used.
+#
+# `gfxpayload=text` (an earlier attempt) is BIOS/VGA-specific -- pure
+# UEFI has no legacy VGA text mode at all, so requesting it likely
+# caused its own "no suitable video mode" failure under UEFI. `keep`
+# leaves whatever GOP mode is already active instead of negotiating a
+# new one, which is universally safe under both BIOS and UEFI.
 cat > "$IMAGE_DIR/boot/grub/grub.cfg" <<'EOF'
-insmod vga
 terminal_output console
-set gfxpayload=text
+set gfxpayload=keep
 set timeout=1
 set default=0
 menuentry "Phoenix OS" {
@@ -37,16 +45,7 @@ menuentry "Phoenix OS" {
 EOF
 
 if command -v grub-mkrescue >/dev/null 2>&1; then
-    # -d /usr/lib/grub/i386-pc forces a BIOS-only image (no EFI boot
-    # catalog at all). Without this, grub-mkrescue builds a hybrid
-    # BIOS+EFI image whenever x86_64-efi grub modules are installed, and
-    # on hardware that boots that USB via UEFI, GRUB's EFI path does its
-    # own separate GOP video-mode negotiation that the BIOS-oriented
-    # `insmod vga`/`terminal_output console` fix above doesn't touch --
-    # and pure UEFI has no legacy VGA text mode to fall back to at all.
-    # This kernel's boot32.asm bootstrap is BIOS-only (32-bit protected
-    # mode handoff), so there's no UEFI path worth keeping anyway.
-    grub-mkrescue -d /usr/lib/grub/i386-pc -o "$ISO_NAME" "$IMAGE_DIR"
+    grub-mkrescue -o "$ISO_NAME" "$IMAGE_DIR"
     echo "ISO created: $ISO_NAME"
 else
     echo "WARNING: grub-mkrescue not found. ISO cannot be created."

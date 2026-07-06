@@ -49,3 +49,31 @@ pub fn dispatch(intent: &Intent) {
         synapse::send(Message::new("Hermes", "CognitiveCore", to_string(&intent.action)));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Regression guard for the bug root-caused in commit e052c19: `parse`
+    // only crashed once reached deep enough in a real boot, not in isolated
+    // testing -- comparisons here go through `str_eq`, never raw `==`, per
+    // safe_alloc's documented constraint.
+
+    #[test_case]
+    fn parse_classifies_research_intent() {
+        let intent = parse("research solid state batteries");
+        assert!(str_eq(&intent.action, "KnowledgeQuery"));
+    }
+
+    #[test_case]
+    fn parse_classifies_repair_intent() {
+        let intent = parse("please fix the display");
+        assert!(str_eq(&intent.action, "SelfRepair"));
+    }
+
+    #[test_case]
+    fn parse_falls_back_to_general_interaction() {
+        let intent = parse("hello there");
+        assert!(str_eq(&intent.action, "GeneralInteraction"));
+    }
+}

@@ -44,3 +44,30 @@ pub fn start() {
     println!("phoenix> ls");
     println!("{}", handle_command("ls"));
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Regression guard for the boot-only shell crash fixed alongside
+    // hermes::parse in commit e052c19 -- comparisons go through `str_eq`,
+    // never raw `==`, per safe_alloc's documented constraint.
+
+    #[test_case]
+    fn handle_command_help_lists_commands() {
+        let out = handle_command("help");
+        assert!(str_eq(&out, "Available: help, clear, info, ls, whoami, exit"));
+    }
+
+    #[test_case]
+    fn handle_command_unknown_echoes_input() {
+        let out = handle_command("frobnicate");
+        assert!(str_eq(&out, "Unknown command: frobnicate"));
+    }
+
+    #[test_case]
+    fn handle_command_empty_input_returns_empty() {
+        assert!(handle_command("").is_empty());
+        assert!(handle_command("   ").is_empty());
+    }
+}

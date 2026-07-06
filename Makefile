@@ -18,7 +18,9 @@ build-all:
 
 test:
 	cargo test -p common --target x86_64-unknown-linux-gnu
-	cargo build -p kernel --tests
+	./scripts/test_kernel.sh
+	./scripts/build_iso.sh
+	./scripts/test_boot.sh
 
 clean:
 	cargo clean

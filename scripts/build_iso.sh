@@ -19,9 +19,9 @@ set -e
 # from this script or the kernel side. Legacy/CSM sidesteps it entirely
 # and boots cleanly end-to-end, VGA text console rendering correctly.
 
-ISO_NAME="phoenix-os-grub.iso"
-IMAGE_DIR="isodir"
-KERNEL_BIN="target/x86_64-unknown-none/debug/kernel"
+ISO_NAME="${ISO_NAME:-phoenix-os-grub.iso}"
+IMAGE_DIR="${IMAGE_DIR:-isodir}"
+KERNEL_BIN="${KERNEL_BIN:-target/x86_64-unknown-none/debug/kernel}"
 
 echo "Building Phoenix OS ISO..."
 

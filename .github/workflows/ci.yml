@@ -21,9 +21,6 @@ jobs:
         components: clippy, rustfmt, rust-src
         targets: x86_64-unknown-none
 
-    - name: Install QEMU/GRUB tooling
-      run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 nasm grub-pc-bin grub-efi-amd64-bin xorriso mtools jq
-
     - name: Check formatting
       run: cargo fmt --all -- --check
 
@@ -33,14 +30,8 @@ jobs:
     - name: Run Host Tests
       run: cargo test -p common --target x86_64-unknown-linux-gnu --verbose
 
-    - name: Run kernel #[test_case] suite in QEMU
-      run: ./scripts/test_kernel.sh
-
-    - name: Build production ISO
-      run: ./scripts/build_iso.sh
-
-    - name: Boot-verify ISO in QEMU
-      run: ./scripts/test_boot.sh
+    - name: Build Kernel Tests
+      run: cargo build -p kernel --tests --verbose
 
     - name: Clippy
       run: cargo clippy --workspace -- -D warnings

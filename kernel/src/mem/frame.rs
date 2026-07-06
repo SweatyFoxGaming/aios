@@ -70,3 +70,18 @@ unsafe impl FrameAllocator<Size4KiB> for BootFrameAllocator {
         self.find_next_frame()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // `BootFrameAllocator` itself is a local variable in `kernel_main_entry`,
+    // never stored in a global, and synthesizing a `multiboot2::MemoryMapTag`
+    // isn't practical outside real Multiboot2 boot data -- so this is
+    // deliberately scoped down to the one linker-provided invariant that can
+    // be checked cheaply and in isolation.
+    #[test_case]
+    fn kernel_physical_end_is_nonzero_and_page_aligned() {
+        let end = unsafe { core::ptr::addr_of!(super::kernel_physical_end) as u64 };
+        assert!(end > 0);
+        assert_eq!(end % 4096, 0);
+    }
+}

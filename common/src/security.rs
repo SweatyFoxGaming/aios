@@ -58,3 +58,24 @@ impl Token {
         self.capabilities[cap as usize]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_token_grants_no_capabilities() {
+        let token = Token::empty(1);
+        assert!(!token.has(Capability::MemAlloc));
+        assert!(!token.has(Capability::ServiceRegister));
+    }
+
+    #[test]
+    fn grant_and_check_round_trip() {
+        let mut token = Token::empty(1);
+        token.grant(Capability::MemAlloc);
+        assert!(token.has(Capability::MemAlloc));
+        // Granting one capability must not imply another.
+        assert!(!token.has(Capability::ServiceRegister));
+    }
+}

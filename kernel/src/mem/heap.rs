@@ -60,3 +60,31 @@ pub fn init_heap(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::boxed::Box;
+    use crate::safe_alloc;
+
+    #[test_case]
+    fn heap_allocation_round_trip() {
+        let b = Box::new(12345u64);
+        assert_eq!(*b, 12345);
+        drop(b);
+    }
+
+    #[test_case]
+    fn heap_handles_large_zeroed_vec() {
+        // Exercises heap + the safe_alloc memset-crash workaround together
+        // at a size well beyond the documented ~192-byte threshold.
+        let buf = safe_alloc::zeroed_vec(64 * 1024);
+        assert_eq!(buf.len(), 64 * 1024);
+    }
+
+    #[test_case]
+    fn heap_constants_match_documented_values() {
+        assert_eq!(HEAP_START, 0x_4444_4444_0000);
+        assert_eq!(HEAP_SIZE, 32 * 1024 * 1024);
+    }
+}

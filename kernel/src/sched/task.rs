@@ -33,3 +33,18 @@ impl Task {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_case]
+    fn task_new_defaults_to_ready_state() {
+        // TaskId/TaskState are plain derived-PartialEq types with no
+        // embedded string data -- outside the safe_alloc-documented bug
+        // family, safe to assert_eq! directly.
+        let t = Task::new(7);
+        assert_eq!(t.id, TaskId(7));
+        assert_eq!(t.state, TaskState::Ready);
+    }
+}

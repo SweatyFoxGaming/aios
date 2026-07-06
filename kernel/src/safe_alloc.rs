@@ -282,3 +282,113 @@ macro_rules! safe_format {
         w.into_string()
     }};
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Every comparison below goes through `str_eq` or a primitive (`usize`/
+    // `bool`/`u8`) equality check -- never raw `==`/`assert_eq!` on
+    // `&str`/`String`, per this module's own documented bug #2.
+
+    #[test_case]
+    fn zeroed_vec_below_threshold_is_zeroed() {
+        let buf = zeroed_vec(64);
+        assert_eq!(buf.len(), 64);
+        for &b in &buf {
+            assert_eq!(b, 0);
+        }
+    }
+
+    #[test_case]
+    fn zeroed_vec_above_threshold_does_not_crash() {
+        // Deliberately far above the ~192-byte memset-crash threshold
+        // documented in this module's header -- regression guard for bug
+        // class #1. If `zeroed_vec` regresses to `vec![0; n]`, this either
+        // panics (caught by the test panic handler) or the underlying CPU
+        // exception itself aborts the QEMU test run abnormally.
+        for size in [4096usize, 65536] {
+            let buf = zeroed_vec(size);
+            assert_eq!(buf.len(), size);
+            for &b in &buf {
+                assert_eq!(b, 0);
+            }
+        }
+    }
+
+    #[test_case]
+    fn str_eq_matches_and_differs() {
+        assert!(str_eq("hello", "hello"));
+        assert!(!str_eq("hello", "world"));
+        assert!(!str_eq("short", "longer"));
+        assert!(str_eq("", ""));
+    }
+
+    #[test_case]
+    fn first_word_extracts_leading_token_and_handles_edges() {
+        assert!(str_eq(first_word("  research solid"), "research"));
+        assert!(str_eq(first_word("solo"), "solo"));
+        assert!(first_word("").is_empty());
+        assert!(first_word("   ").is_empty());
+    }
+
+    #[test_case]
+    fn contains_finds_and_rejects_substrings() {
+        assert!(contains("research solid state batteries", "solid"));
+        assert!(!contains("research solid state batteries", "xyz"));
+        assert!(contains("anything", ""));
+        assert!(!contains("short", "muchlongerneedle"));
+    }
+
+    #[test_case]
+    fn copy_from_slice_copies_bytes_exactly() {
+        let src = [1u8, 2, 3, 4, 5, 6, 7, 8];
+        let mut dst = [0u8; 8];
+        copy_from_slice(&mut dst, &src);
+        for i in 0..8 {
+            assert_eq!(dst[i], src[i]);
+        }
+    }
+
+    #[test_case]
+    fn to_string_round_trips_short_string() {
+        let s = to_string("hello");
+        assert_eq!(s.len(), 5);
+        for (i, &expected) in b"hello".iter().enumerate() {
+            assert_eq!(s.as_bytes()[i], expected);
+        }
+    }
+
+    #[test_case]
+    fn concat2_concat3_join_and_truncate_at_max_len() {
+        let joined = concat2("foo-", "bar");
+        assert!(str_eq(&joined, "foo-bar"));
+
+        let joined3 = concat3("a", "b", "c");
+        assert!(str_eq(&joined3, "abc"));
+
+        // Combined length exceeds MAX_LEN (128) -- result must be clamped,
+        // not panic or corrupt. Built via zeroed_vec + an explicit byte
+        // loop rather than `str::repeat` -- see this test module's header
+        // comment on avoiding stdlib growth/generic-dispatch paths.
+        let mut long_a_buf = zeroed_vec(100);
+        let mut long_b_buf = zeroed_vec(100);
+        for b in &mut long_a_buf {
+            *b = b'a';
+        }
+        for b in &mut long_b_buf {
+            *b = b'b';
+        }
+        // SAFETY: every byte was just set to an ASCII character above.
+        let long_a = unsafe { String::from_utf8_unchecked(long_a_buf) };
+        let long_b = unsafe { String::from_utf8_unchecked(long_b_buf) };
+        let clamped = concat2(&long_a, &long_b);
+        assert_eq!(clamped.len(), MAX_LEN);
+    }
+
+    #[test_case]
+    fn safe_format_macro_produces_expected_bytes() {
+        let s = crate::safe_format!("id={}", 42u32);
+        assert!(str_eq(&s, "id=42"));
+    }
+}

@@ -170,3 +170,23 @@ pub fn get_state() -> MouseState {
 pub fn take_click() -> Option<(i32, i32)> {
     PENDING_CLICK.lock().take()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_case]
+    fn mouse_wait_bounded_retry_returns() {
+        // Simply completing proves the bounded retry documented on
+        // MOUSE_WAIT_ATTEMPTS still terminates -- if it regresses to an
+        // unbounded loop, this hangs and is caught by the outer QEMU
+        // timeout in scripts/test_kernel.sh.
+        mouse_wait(0);
+        mouse_wait(1);
+    }
+
+    #[test_case]
+    fn mouse_wait_attempts_constant_is_sane() {
+        assert!(MOUSE_WAIT_ATTEMPTS >= 1000);
+    }
+}

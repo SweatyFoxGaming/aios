@@ -75,3 +75,27 @@ pub fn init() {
     let kernel_task = Task::new(0);
     let _ = sched.add_task(kernel_task);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_case]
+    fn scheduler_round_robin_advances_index() {
+        let mut sched = SCHEDULER.lock();
+        let old = sched.current_task_idx;
+        sched.schedule();
+        assert_eq!(sched.current_task_idx, (old + 1) % MAX_TASKS);
+    }
+
+    #[test_case]
+    fn scheduler_add_task_succeeds_until_full() {
+        // A fresh local Scheduler, not the shared global -- avoids
+        // disturbing boot state the rest of the kernel depends on.
+        let mut sched = Scheduler::new();
+        for i in 0..MAX_TASKS {
+            assert!(sched.add_task(Task::new(i as u64)));
+        }
+        assert!(!sched.add_task(Task::new(999)));
+    }
+}

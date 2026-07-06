@@ -43,6 +43,7 @@ pub mod net;
 mod panic;
 /// Package manager.
 pub mod pkg;
+mod qemu_exit;
 /// Resource governor.
 pub mod pulse;
 /// Recovery tools.
